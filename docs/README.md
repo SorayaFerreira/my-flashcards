@@ -6,11 +6,11 @@ Esta pasta guarda os requisitos, o design e os planos de implementação do app.
 |---|---|
 | [requisitos.md](requisitos.md) | Objetivo, requisitos funcionais e não funcionais, fora de escopo e o registro das decisões de produto |
 | [design.md](design.md) | Decisões técnicas, arquitetura MVVM, modelo de dados, telas, mídia, permissões, lembrete, backup e testes |
-| `planos/` | Um plano detalhado por etapa de implementação, criado depois que o design estiver aprovado |
+| [planos/](planos/README.md) | Um plano detalhado por etapa de implementação, com código, testes e checklist no celular |
 
 ## Situação atual
 
 - **Requisitos:** fechados em 2026-10-11, com ajustes em 2026-10-12 (lembrete aleatório).
 - **Design:** todas as quatro partes aprovadas em 2026-10-12.
-- **Planos de implementação:** em elaboração em `planos/`, um por etapa.
+- **Planos de implementação:** os nove planos (etapas 0 a 8) estão escritos em [planos/](planos/README.md) e aguardam revisão.
 - **Código:** nenhum. A implementação só começa depois que os planos forem aprovados.

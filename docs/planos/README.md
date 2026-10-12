@@ -1,0 +1,60 @@
+# Planos de implementação
+
+Cada etapa do [design](../design.md) tem um plano próprio, com tarefas pequenas, código completo, testes e commits. As etapas são feitas **em ordem**: cada plano parte do código que o anterior deixou.
+
+| # | Plano | Entrega |
+|---|---|---|
+| 0 | [00-ambiente-e-projeto.md](00-ambiente-e-projeto.md) | Flutter instalado, projeto criado e um app vazio rodando no celular |
+| 1 | [01-dados-e-decks.md](01-dados-e-decks.md) | Banco de dados e tela de decks (criar, renomear, excluir) |
+| 2 | [02-cards-de-texto.md](02-cards-de-texto.md) | Tela do deck e editor de cards só com texto |
+| 3 | [03-revisao.md](03-revisao.md) | Revisão com o card que vira ao arrastar e o contador. **O app já fica usável** |
+| 4 | [04-imagens.md](04-imagens.md) | Imagens pela câmera e pela galeria |
+| 5 | [05-audio.md](05-audio.md) | Gravar e tocar áudio |
+| 6 | [06-lembrete.md](06-lembrete.md) | Lembrete diário em horário aleatório e tela de configurações |
+| 7 | [07-backup.md](07-backup.md) | Exportar e importar backup |
+| 8 | [08-acabamento-e-release.md](08-acabamento-e-release.md) | Splash, assinatura, APK de release e checklist final |
+
+## Como executar um plano
+
+1. Antes da etapa 0, o branch `planejamento` (que tem esta pasta `docs/`) precisa estar no `main`:
+   ```bash
+   git switch main && git merge --ff-only planejamento
+   ```
+2. Cada etapa começa com um branch próprio, criado a partir do `main` atualizado. O nome de cada branch aparece no início do plano.
+3. As tarefas são feitas na ordem em que aparecem. Cada passo tem uma caixa (`- [ ]`) para marcar.
+4. Toda tarefa de código segue o TDD:
+   1. escrever o teste;
+   2. rodar e ver o teste falhar;
+   3. implementar;
+   4. rodar e ver o teste passar;
+   5. fazer o commit.
+5. Ao fim da etapa, `flutter analyze` não pode mostrar nenhum problema e `flutter test` precisa passar inteiro. Depois disso, o checklist manual da etapa é feito no celular e o branch entra no `main`:
+   ```bash
+   git switch main && git merge --no-ff etapa-N-nome && git branch -d etapa-N-nome
+   ```
+
+## Convenções de código
+
+- **Os identificadores no código ficam em inglês** (classes, métodos, variáveis e arquivos). **Os textos que aparecem na tela ficam em português**, exatamente como no design.
+- As ações descritas em português nas tabelas do design correspondem a estes nomes no código:
+
+  | Design | Código |
+  |---|---|
+  | carregar | `load()` |
+  | criar, renomear, excluir (deck) | `createDeck()`, `renameDeck()`, `deleteDeck()` |
+  | salvar, descartar, excluir card | `save()`, `discard()`, `deleteCard()` |
+  | iniciar, próximo, anterior, recomeçar | `start()`, `next()`, `previous()`, `restart()` |
+  | versoVisto | `markBackSeen()` |
+  | tirar foto / escolher da galeria | `pickImage(side, ImageOrigin.camera / ImageOrigin.gallery)` |
+  | iniciar / parar gravação | `startRecording(side)` / `stopRecording()` |
+  | ligar e desligar o lembrete | `setReminderEnabled(bool)` |
+  | exportar / importar | `exportBackup()` / `pickAndPrepareImport()` + `confirmImport()` |
+
+- **Navegação:**
+  - Cada tela recebe o seu ViewModel pronto e callbacks para navegar (por exemplo, `onOpenDeck`).
+  - Quem cria os ViewModels e as rotas é `lib/routes.dart`, que cria cada ViewModel **uma única vez por rota**.
+  - A tela é **dona** do ViewModel que recebe e chama `dispose()` nele.
+- **Testes:**
+  - Repositórios são testados com SQLite em memória (`sqflite_common_ffi`).
+  - ViewModels e telas são testados com repositórios falsos, que ficam em `test/fakes/`.
+  - Os testes ficam em `test/`, espelhando a estrutura de `lib/`.

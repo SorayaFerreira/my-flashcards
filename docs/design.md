@@ -156,13 +156,13 @@ test/                                espelha a estrutura de lib/
 
 O áudio é tocado pelo ViewModel, e não pelo widget.
 
-A regra do contador (RF-16) mora no `ReviewViewModel`. A View avisa `versoVisto()` quando a animação mostra o verso. O ViewModel decide se conta: só conta se for a primeira vez daquele card na sessão. Nesse caso, ele pede ao `CardRepository` para somar 1.
+A regra do contador (RF-16) mora no `ReviewViewModel`. A View avisa `markBackSeen()` quando a animação mostra o verso. O ViewModel decide se conta: só conta se for a primeira vez daquele card na sessão. Nesse caso, ele pede ao `CardRepository` para somar 1.
 
 ### Injeção de dependências
 
 1. `main.dart` cria os services e os repositórios uma única vez.
 2. Esses objetos são agrupados num objeto `AppDependencies`, que é passado para `App`.
-3. Cada rota em `app.dart` cria o seu ViewModel, passando os repositórios pelo construtor.
+3. Cada rota, definida em `lib/routes.dart`, cria o seu ViewModel uma única vez e passa os repositórios pelo construtor. A tela recebe esse ViewModel pronto e é dona dele, chamando `dispose()` quando sai.
 
 Nos testes, os repositórios são trocados por versões falsas (fakes) que implementam a mesma classe.
 
@@ -379,7 +379,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 - A animação dura cerca de 250 ms. No meio do giro, o conteúdo troca para o outro lado, já desespelhado.
 
 **O contador:**
-- Na primeira vez que o verso aparece, a View chama `versoVisto()`.
+- Na primeira vez que o verso aparece, a View chama `markBackSeen()`.
 - O número sobe na hora, se for a primeira vez daquele card na sessão (RF-16).
 
 **Dica de gesto:**
@@ -576,7 +576,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 | Unidade: lembrete | Dias agendados, horários dentro da faixa, nenhum dia repetido, regra do "hoje", completar a agenda | Relógio falso, `Random` com semente fixa e um `NotificationService` falso que só registra os agendamentos |
 | Unidade: backup | Exportar e importar de volta; recusa de zip-slip; manifesto inválido; rollback quando um passo falha | Pastas temporárias e falha injetada |
 | Unidade: ViewModels | Ordem da revisão (menos revisados primeiro, empates embaralhados), contador uma vez por sessão, limites da navegação, fim da sessão, validação do editor, descarte, nome de deck | Repositórios falsos |
-| Widget | `FlipCard`: arrastar além da metade vira, arrasto curto volta, `versoVisto` chamado uma vez. `CardSideView`: combinações de conteúdo e imagem sumida. Editor: quando o Salvar fica ativo. Revisão: botões | `flutter test`, com `tester.drag` e afins |
+| Widget | `FlipCard`: arrastar além da metade vira, arrasto curto volta, o callback `onFlip` é chamado uma vez a cada virada completa. `CardSideView`: combinações de conteúdo e imagem sumida. Editor: quando o Salvar fica ativo. Revisão: botões | `flutter test`, com `tester.drag` e afins |
 | Manual, no celular | Câmera, galeria, microfone (inclusive negar a permissão), som, notificação aparecendo e sobrevivendo a reinício, exportar para o Drive e importar, tema escuro, tamanho do APK | Checklist no fim de cada etapa que mexe com o aparelho |
 
 Os plugins (gravador, câmera, player, notificações, compartilhar e escolher arquivo) ficam atrás dos services. Nos testes automáticos, eles são trocados por versões falsas. O comportamento real é conferido pelo checklist manual.
