@@ -1,0 +1,8 @@
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "logo-f/icon_legacy.png"
+  min_sdk_android: 33
+  adaptive_icon_background: "logo-f/icon_background.png"
+  adaptive_icon_foreground: "logo-f/icon_foreground.png"
+  adaptive_icon_monochrome: "logo-f/icon_monochrome.png"
