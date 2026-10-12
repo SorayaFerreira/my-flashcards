@@ -2,11 +2,15 @@
 
 > **Para agentes:** SUB-SKILL OBRIGATÓRIO: use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para executar este plano tarefa por tarefa. Os passos usam caixas (`- [ ]`) para acompanhamento.
 
-**Objetivo:** deixar o Flutter instalado, o celular conectado e um projeto Flutter vazio, com o ícone do app, rodando no celular.
+**Objetivo:** conferir o Flutter que já está instalado (via FVM), conectar o celular e deixar um projeto Flutter vazio, com o ícone do app, rodando no celular.
 
 **Arquitetura:** o projeto Flutter é criado na raiz do repositório, ao lado de `docs/` e `logo-f/`, só com a plataforma Android. Nesta etapa, o código Dart é só um `App` com uma tela "Em construção". A arquitetura MVVM começa na etapa 1.
 
-**Tecnologias:** Flutter 3.47.7 estável (Dart 3.13.5), Android SDK em `~/Android/Sdk`, `flutter_launcher_icons` 0.14.
+**Tecnologias:**
+- Flutter 3.47.5 estável (Dart 3.13.4), instalado e gerenciado pelo **FVM** 4.1, fixado no projeto com `.fvmrc`;
+- JDK 17, já configurado no Flutter;
+- Android SDK em `~/Android/Sdk`;
+- `flutter_launcher_icons` 0.14.
 
 **Spec:** [docs/design.md](../design.md) e [docs/requisitos.md](../requisitos.md)
 
@@ -17,75 +21,53 @@
 - Só Android. `minSdk = 33` (Android 13).
 - `applicationId = "com.sorayaferreira.myflashcards"`. O nome do pacote Dart é `my_flashcards` e a org é `com.sorayaferreira`.
 - O nome que aparece no celular é `My Flashcards`.
-- Usar Flutter 3.47.x estável. O `dart` usado precisa ser o que vem dentro do Flutter, e não o `/usr/bin/dart` do sistema.
+- O Flutter vem do FVM, na versão 3.47.5, fixada no projeto pelo `.fvmrc`. Sobre os comandos:
+  - **no terminal da Soraya,** `flutter` é um alias de `fvm flutter`;
+  - **em scripts e agentes** (shell não interativo, onde o alias não existe), use `fvm flutter`;
+  - **para `dart run`, use sempre `fvm dart`.** O `dart` do terminal é o `/usr/bin/dart` do sistema, e não o do Flutter.
 - Nenhum pacote além dos listados em "Pacotes previstos" no design.
 - `flutter analyze` sem problemas e `flutter test` passando ao fim da etapa.
 
 ## Pontos de atenção na revisão
 
 1. **O `flutter create` pode sobrescrever o `README.md` do repositório.** O esperado é que o README continue igual. Na tarefa 3, um `git diff` confere isso, e o arquivo é restaurado se tiver mudado.
-2. **Dois `dart` no PATH.** Com o `/usr/bin/dart` aparecendo antes, os comandos `dart run` usariam um SDK diferente do Flutter. O esperado é `which dart` apontar para `~/development/flutter/bin/dart`. A tarefa 1 confere isso.
-3. **JDK 25 com o Gradle.** O template usa o Gradle 9.3.1, que roda no JDK 25. Se o build falhar com uma mensagem sobre a versão do Java, o esperado é seguir o passo de contingência da tarefa 5, que usa o JDK 21.
+2. **`dart run` com o Dart do sistema.** O `/usr/bin/dart` (3.13.5) não é o Dart do Flutter do projeto. O esperado é todo `dart run` ser `fvm dart run`, como na tarefa 4.
+3. **Outra versão global do FVM.** O FVM também tem a 3.35.0 instalada. Se a versão global mudar, o projeto precisa continuar na 3.47.5. O esperado é `fvm flutter --version`, dentro do projeto, mostrar 3.47.5 por causa do `.fvmrc` criado na tarefa 3.
 4. **Celular sem permissão no `adb`.** No Arch, `adb devices` pode mostrar `no permissions`. O esperado é instalar as regras udev do Android, como mostra a tarefa 2.
 5. **Ícone monocromático ausente.** Sem a camada monocromática, o ícone temático do Android 13 aparece genérico. A tarefa 4 confere que o XML gerado contém `<monochrome>`.
 
 ---
 
-### Tarefa 1: instalar o Flutter SDK
+### Tarefa 1: conferir o Flutter
 
-**Arquivos:**
-- Modificar: `~/.bashrc` (fora do repositório)
+**Arquivos:** nenhum. O Flutter já está instalado pelo FVM. Esta tarefa só confirma o ambiente; ele foi conferido em 2026-10-12.
 
-- [ ] **Passo 1: baixar o Flutter 3.47.7 e conferir o checksum**
-
-```bash
-mkdir -p ~/development && cd ~/development
-curl -LO https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.7-stable.tar.xz
-echo "af7455f540df951184c7953fbe3cf884766e7541dacf8571f9f582db03dd6230  flutter_linux_3.47.7-stable.tar.xz" | sha256sum -c
-```
-
-Esperado: `flutter_linux_3.47.7-stable.tar.xz: OK`
-
-- [ ] **Passo 2: extrair e colocar no PATH, antes do `/usr/bin`**
+- [ ] **Passo 1: conferir a versão**
 
 ```bash
-tar -xf flutter_linux_3.47.7-stable.tar.xz -C ~/development
-rm flutter_linux_3.47.7-stable.tar.xz
-echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
+fvm flutter --version
 ```
 
-- [ ] **Passo 3: conferir as versões e qual `dart` está sendo usado**
+Esperado: `Flutter 3.47.5` e `Dart 3.13.4`.
+
+- [ ] **Passo 2: rodar o `flutter doctor`**
 
 ```bash
-flutter --version
-which flutter dart
+fvm flutter doctor
 ```
 
-Esperado:
-- `flutter --version` mostra `Flutter 3.47.7` e `Dart 3.13.5`.
-- `which` mostra `~/development/flutter/bin/flutter` e `~/development/flutter/bin/dart`.
+Esperado: `[✓] Flutter` e `[✓] Android toolchain`, com as licenças do Android aceitas. Os ✗ de Chrome e de Linux toolchain podem ser ignorados, porque o app é só para Android. Para que eles parem de aparecer (opcional):
+```bash
+fvm flutter config --no-enable-web --no-enable-linux-desktop
+```
 
-Se `which dart` mostrar `/usr/bin/dart`, a linha do PATH não ficou antes do `/usr/bin`. Corrija o `~/.bashrc` e abra um terminal novo.
-
-- [ ] **Passo 4: configurar o Flutter só para Android e aceitar as licenças**
+- [ ] **Passo 3: conferir o Java usado pelo Gradle**
 
 ```bash
-flutter config --android-sdk ~/Android/Sdk
-flutter config --no-enable-web --no-enable-linux-desktop
-flutter config --no-analytics
-flutter doctor --android-licenses
+fvm flutter doctor -v | grep -A1 "Java binary"
 ```
 
-Responda `y` para todas as licenças.
-
-- [ ] **Passo 5: rodar o `flutter doctor`**
-
-```bash
-flutter doctor -v
-```
-
-Esperado: `[✓] Flutter` e `[✓] Android toolchain`. Avisos sobre Chrome, Linux desktop ou Android Studio podem ser ignorados.
+Esperado: `/usr/lib/jvm/java-17-openjdk/bin/java`.
 
 ---
 
@@ -130,6 +112,7 @@ Esperado: o celular aparece na lista com `android-arm64`.
 
 **Arquivos:**
 - Criar (gerados pelo `flutter create`): `pubspec.yaml`, `analysis_options.yaml`, `.metadata`, `android/**`, `lib/main.dart`, `test/widget_test.dart`
+- Criar (gerado pelo `fvm use`): `.fvmrc`. A pasta `.fvm/` fica fora do git.
 - Modificar: `.gitignore` (gerado), `android/app/build.gradle.kts`, `android/app/src/main/AndroidManifest.xml`, `pubspec.yaml`
 - Criar: `lib/app.dart`
 - Substituir: `lib/main.dart`
@@ -151,11 +134,26 @@ git switch -c etapa-0-ambiente
 
 ```bash
 cp README.md /tmp/README.md.bak
-flutter create --org com.sorayaferreira --project-name my_flashcards \
+fvm flutter create --org com.sorayaferreira --project-name my_flashcards \
   --platforms android --description "Flashcards pessoais para estudar inglês." .
 ```
 
 Esperado: `All done!`, e as pastas `android/`, `lib/` e `test/` criadas.
+
+Depois, fixe a versão do Flutter no projeto:
+```bash
+fvm use 3.47.5
+```
+
+Se o FVM perguntar se deve acrescentar `.fvm` ao `.gitignore`, responda **sim**. Se perguntar sobre as configurações do VS Code, responda **sim**: assim o editor usa o mesmo SDK.
+
+Confira o resultado:
+```bash
+cat .fvmrc
+grep -n "\.fvm" .gitignore
+```
+
+Esperado: o `.fvmrc` contém `"flutter": "3.47.5"`, e o `.gitignore` tem uma linha com `.fvm/`. Se faltar essa linha, acrescente `.fvm/` ao fim do `.gitignore`.
 
 - [ ] **Passo 3: garantir que o README do repositório não mudou**
 
@@ -289,7 +287,7 @@ Esperado: `All tests passed!` e `No issues found!`
 - [ ] **Passo 11: commit**
 
 ```bash
-git add .gitignore .metadata pubspec.yaml pubspec.lock analysis_options.yaml android lib test
+git add .gitignore .fvmrc .metadata pubspec.yaml pubspec.lock analysis_options.yaml android lib test
 git commit -m "chore: cria o projeto Flutter só para Android"
 ```
 
@@ -326,7 +324,7 @@ flutter_launcher_icons:
 - [ ] **Passo 3: gerar os ícones**
 
 ```bash
-dart run flutter_launcher_icons
+fvm dart run flutter_launcher_icons
 ```
 
 Esperado: `Successfully generated launcher icons`.
@@ -359,13 +357,6 @@ flutter build apk --debug
 ```
 
 Esperado: `✓ Built build/app/outputs/flutter-apk/app-debug.apk`.
-
-**Contingência (só se falhar com erro de versão do Java**, por exemplo `Unsupported class file major version` ou `Unsupported Java`):
-```bash
-sudo pacman -S jdk21-openjdk
-flutter config --jdk-dir /usr/lib/jvm/java-21-openjdk
-flutter build apk --debug
-```
 
 - [ ] **Passo 2: rodar no celular**
 

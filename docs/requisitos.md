@@ -85,6 +85,8 @@ Princípios: zero anúncios, zero recursos premium, app leve e visual limpo.
 | 2026-10-12 | Horário do lembrete | Substitui a decisão anterior: uma notificação por dia, num horário aleatório entre 9h e 20h, sem seletor de horário. Um atraso de alguns minutos é aceitável |
 | 2026-10-12 | Faixa do lembrete | Confirmada: das 9h às 20h |
 | 2026-10-12 | Identificador do app | `com.sorayaferreira.myflashcards` |
+| 2026-10-12 | Ambiente | Usar o Flutter 3.47.5 que já está instalado pelo FVM, e não instalar outro |
+| 2026-10-12 | Testes no celular | Feitos pela usuária. A execução dos planos para antes de cada checklist manual |
 | 2026-10-12 | Limites de mídia | Áudio de até 60 s. Imagens com no máximo 1280 px, em JPEG com qualidade 80 |
 | 2026-10-11 | Gestos na revisão | Arrastar para o lado vira e desvira o card. Os botões ‹ Anterior e Próximo › trocam de card |
 | 2026-10-11 | Contador | Sobe 1 na primeira vez que o verso é visto, no máximo uma vez por card em cada sessão |

@@ -15,7 +15,7 @@ Este documento descreve **como** o app será construído. O **quê** e o **porqu
 
 | Assunto | Decisão | Motivo |
 |---|---|---|
-| Framework | Flutter 3.47.x estável, com Dart 3.13.x | Versão estável atual em 2026-10-11, igual ao Dart já instalado |
+| Framework | Flutter 3.47.5 estável, com Dart 3.13.4, gerenciado pelo FVM e fixado no projeto com `.fvmrc` | Já instalado na máquina pelo FVM, e atende ao mínimo de todos os pacotes (Flutter 3.44) |
 | Identificador do app | `applicationId` = `com.sorayaferreira.myflashcards`, `--org com.sorayaferreira` e nome do projeto Dart `my_flashcards` | Escolhido pela usuária. É permanente: se mudar, o Android trata como outro app |
 | Banco de dados | `sqflite` | Usa o SQLite que já vem no Android, sem embutir uma cópia, o que deixa o APK menor. São só três tabelas, então escrever o SQL à mão custa pouco |
 | Arquitetura | MVVM, seguindo o [guia oficial de arquitetura do Flutter](https://docs.flutter.dev/app-architecture) | Pedido da usuária. O guia oficial já é MVVM, e segui-lo deixa o projeto parecido com a documentação do Flutter |
@@ -44,12 +44,12 @@ As versões foram conferidas no pub.dev em 2026-10-11. O plano de cada etapa adi
 | `flutter_launcher_icons` (dev) | 0.14.4 | Gerar o ícone adaptativo a partir de `logo-f/` |
 | `sqflite_common_ffi` (dev) | 2.4.3 | Rodar o banco nos testes, no computador |
 
-### Ambiente de desenvolvimento (situação em 2026-10-11)
+### Ambiente de desenvolvimento (conferido em 2026-10-12)
 
-- **Dart 3.13.5:** instalado.
-- **Flutter SDK:** **não instalado**. A instalação é a etapa 0 do plano.
+- **Flutter:** 3.47.5 estável (Dart 3.13.4), instalado pelo **FVM** 4.1.2 como versão global. O projeto fixa essa versão com `.fvmrc`. No terminal da usuária, `flutter` é um alias de `fvm flutter`; em shells não interativos, o comando é `fvm flutter`. O `/usr/bin/dart` (3.13.5) do sistema **não** é o Dart do Flutter: use `fvm dart`.
+- **`flutter doctor`:** ✓ Flutter e ✓ Android toolchain, com as licenças aceitas. Os ✗ de Chrome e Linux desktop não importam.
+- **Java:** o Flutter usa o JDK 17 (`/usr/lib/jvm/java-17-openjdk`). O OpenJDK 25 do sistema não é usado no build.
 - **Android SDK:** instalado em `~/Android/Sdk`, com as plataformas 31 a 37 e os build-tools 35 e 36.
-- **Java:** OpenJDK 25. Se o Gradle do Android não aceitar essa versão, instale o JDK 21 e aponte o Flutter para ele com `flutter config --jdk-dir`.
 - **Ícone:** `logo-f/` já tem as camadas do ícone adaptativo em 1024×1024 (fundo, frente, monocromático e legado).
 
 ---

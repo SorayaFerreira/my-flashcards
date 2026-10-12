@@ -14,6 +14,16 @@ Cada etapa do [design](../design.md) tem um plano próprio, com tarefas pequenas
 | 7 | [07-backup.md](07-backup.md) | Exportar e importar backup |
 | 8 | [08-acabamento-e-release.md](08-acabamento-e-release.md) | Splash, assinatura, APK de release e checklist final |
 
+## Ambiente
+
+O Flutter deste projeto vem do **FVM**, na versão 3.47.5, fixada pelo `.fvmrc` na etapa 0. Os planos escrevem os comandos como `flutter ...`, mas o jeito de rodar depende de onde:
+
+- **No terminal da Soraya:** `flutter` é um alias de `fvm flutter`, então os comandos funcionam como estão escritos.
+- **Em scripts e agentes** (shell não interativo, sem o alias): troque `flutter` por `fvm flutter`.
+- **`dart run`:** use sempre `fvm dart run`. O `dart` do terminal é o `/usr/bin/dart` do sistema, e não o do Flutter.
+
+O Gradle usa o JDK 17 configurado no Flutter (`/usr/lib/jvm/java-17-openjdk`).
+
 ## Como executar um plano
 
 1. Antes da etapa 0, o branch `planejamento` (que tem esta pasta `docs/`) precisa estar no `main`:
