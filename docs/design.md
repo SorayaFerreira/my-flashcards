@@ -44,6 +44,8 @@ As versões foram conferidas no pub.dev em 2026-10-11. O plano de cada etapa adi
 | `flutter_launcher_icons` (dev) | 0.14.4 | Gerar o ícone adaptativo a partir de `logo-f/` |
 | `sqflite_common_ffi` (dev) | 2.4.3 | Rodar o banco nos testes, no computador |
 
+O `flutter create` também adiciona o `cupertino_icons`, que é removido na etapa 0 porque o app só usa ícones do Material. O `flutter_lints` (dev) continua, porque o `analysis_options.yaml` depende dele.
+
 ### Ambiente de desenvolvimento (conferido em 2026-10-12)
 
 - **Flutter:** 3.47.5 estável (Dart 3.13.4), instalado pelo **FVM** 4.1.2 como versão global. O projeto fixa essa versão com `.fvmrc`. No terminal da usuária, `flutter` é um alias de `fvm flutter`; em shells não interativos, o comando é `fvm flutter`. O `/usr/bin/dart` (3.13.5) do sistema **não** é o Dart do Flutter: use `fvm dart`.
