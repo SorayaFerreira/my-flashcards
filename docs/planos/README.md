@@ -28,7 +28,9 @@ Cada etapa do [design](../design.md) tem um plano próprio, com tarefas pequenas
    3. implementar;
    4. rodar e ver o teste passar;
    5. fazer o commit.
-5. Ao fim da etapa, `flutter analyze` não pode mostrar nenhum problema e `flutter test` precisa passar inteiro. Depois disso, o checklist manual da etapa é feito no celular e o branch entra no `main`:
+5. Ao fim da etapa, `flutter analyze` não pode mostrar nenhum problema e `flutter test` precisa passar inteiro.
+6. **Os testes no celular são feitos pela Soraya.** Quem executa o plano para nesse ponto e entrega a ela o checklist manual da etapa. Os itens do checklist só são marcados com o retorno dela, nunca por suposição. O mesmo vale para os passos que precisam do aparelho, como autorizar a depuração USB, aceitar permissões ou mexer no relógio.
+7. Com o checklist confirmado por ela, o branch entra no `main`:
    ```bash
    git switch main && git merge --no-ff etapa-N-nome && git branch -d etapa-N-nome
    ```
