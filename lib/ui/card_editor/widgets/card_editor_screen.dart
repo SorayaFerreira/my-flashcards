@@ -105,9 +105,9 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) => PopScope<bool>(
-        canPop: !_viewModel.hasChanges,
+        canPop: !_viewModel.hasChanges && !_viewModel.isSaving,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) _confirmDiscard();
+          if (!didPop && !_viewModel.isSaving) _confirmDiscard();
         },
         child: Scaffold(
           appBar: AppBar(
@@ -115,7 +115,7 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
             actions: [
               if (!_viewModel.isNew)
                 IconButton(
-                  onPressed: _delete,
+                  onPressed: _viewModel.isSaving ? null : _delete,
                   tooltip: 'Excluir card',
                   icon: const Icon(Icons.delete_outline),
                 ),

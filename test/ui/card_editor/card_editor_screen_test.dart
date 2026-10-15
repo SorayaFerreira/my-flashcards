@@ -1,11 +1,30 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/domain/models/card_side.dart';
 import 'package:my_flashcards/domain/models/flashcard.dart';
 import 'package:my_flashcards/ui/card_editor/view_models/card_editor_view_model.dart';
 import 'package:my_flashcards/ui/card_editor/widgets/card_editor_screen.dart';
+import 'package:my_flashcards/utils/result.dart';
 
 import '../../fakes/fake_card_repository.dart';
+
+class _GatedCardRepository extends FakeCardRepository {
+  _GatedCardRepository(super.cards);
+
+  final gate = Completer<void>();
+
+  @override
+  Future<Result<void>> updateCard({
+    required int id,
+    required CardSide front,
+    required CardSide back,
+  }) async {
+    await gate.future;
+    return super.updateCard(id: id, front: front, back: back);
+  }
+}
 
 void main() {
   late FakeCardRepository cards;
@@ -23,12 +42,16 @@ void main() {
   });
 
   /// Opens the editor from a host page and returns the values it pops with.
-  Future<List<bool?>> openEditor(WidgetTester tester, {int? cardId}) async {
+  Future<List<bool?>> openEditor(
+    WidgetTester tester, {
+    int? cardId,
+    FakeCardRepository? repository,
+  }) async {
     final results = <bool?>[];
     final viewModel = CardEditorViewModel(
       deckId: 1,
       cardId: cardId,
-      cardRepository: cards,
+      cardRepository: repository ?? cards,
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -169,4 +192,33 @@ void main() {
     expect(find.text('Editar card'), findsOneWidget);
     expect(find.text('largar'), findsOneWidget);
   });
+
+  testWidgets(
+    'enquanto salva, a lixeira fica desativada e o voltar não faz nada',
+    (tester) async {
+      final gated = _GatedCardRepository(cards.cards);
+      final results = await openEditor(tester, cardId: 7, repository: gated);
+      await tester.enterText(textField(1), 'largar');
+      await tester.pump();
+
+      await tester.tap(find.text('SALVAR'));
+      await tester.pump();
+
+      final trash = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.delete_outline),
+      );
+      expect(trash.onPressed, isNull);
+
+      await tester.pageBack();
+      await tester.pump();
+      expect(find.text('Descartar alterações?'), findsNothing);
+      expect(find.text('Editar card'), findsOneWidget);
+
+      gated.gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(results, [true]);
+      expect(gated.cards.single.back.text, 'largar');
+    },
+  );
 }
