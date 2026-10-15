@@ -30,7 +30,9 @@ class DeckRepository {
 
   Future<Result<Deck>> createDeck(String name) => guard(() async {
     final trimmed = name.trim();
-    final createdAt = _now();
+    final createdAt = DateTime.fromMillisecondsSinceEpoch(
+      _now().millisecondsSinceEpoch,
+    );
     final id = await _database.db.insert('decks', {
       'name': trimmed,
       'created_at': createdAt.millisecondsSinceEpoch,

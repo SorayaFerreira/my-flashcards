@@ -43,8 +43,12 @@ class FakeDeckRepository implements DeckRepository {
   });
 
   @override
-  Future<Result<void>> renameDeck(int id, String name) => _answer(() {
+  Future<Result<void>> renameDeck(int id, String name) async {
+    if (failWith != null) return Result.error(failWith!);
     final index = _decks.indexWhere((d) => d.id == id);
+    if (index == -1) {
+      return Result.error(NotFoundException('O deck $id não existe.'));
+    }
     final old = _decks[index];
     _decks[index] = Deck(
       id: id,
@@ -52,7 +56,8 @@ class FakeDeckRepository implements DeckRepository {
       createdAt: old.createdAt,
       cardCount: old.cardCount,
     );
-  });
+    return const Result.ok(null);
+  }
 
   @override
   Future<Result<void>> deleteDeck(int id) =>

@@ -24,7 +24,7 @@ class DatabaseService {
       path,
       options: OpenDatabaseOptions(
         version: schemaVersion,
-        singleInstance: false,
+        singleInstance: path != inMemoryDatabasePath,
         // SQLite ignores ON DELETE CASCADE unless this is on for every connection.
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: _createSchema,

@@ -32,6 +32,17 @@ void main() {
     expect(okValue(await repository.getDecks()), [deck]);
   });
 
+  test('o deck criado é igual ao lido, mesmo com microssegundos', () async {
+    repository = DeckRepository(
+      database: database,
+      now: () => DateTime(2026, 10, 12, 9, 30, 0, 0, 123),
+    );
+
+    final deck = okValue(await repository.createDeck('Inglês'));
+
+    expect(okValue(await repository.getDecks()), [deck]);
+  });
+
   test('lista em ordem alfabética sem diferenciar maiúsculas', () async {
     await repository.createDeck('banana');
     await repository.createDeck('Cereja');
