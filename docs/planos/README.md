@@ -40,14 +40,15 @@ O Gradle usa o JDK 17 configurado no Flutter (`/usr/lib/jvm/java-17-openjdk`).
    5. fazer o commit.
 5. Ao fim da etapa, `flutter analyze` não pode mostrar nenhum problema e `flutter test` precisa passar inteiro.
 6. **Os testes no celular são feitos pela Soraya.** Quem executa o plano para nesse ponto e entrega a ela o checklist manual da etapa. Os itens do checklist só são marcados com o retorno dela, nunca por suposição. O mesmo vale para os passos que precisam do aparelho, como autorizar a depuração USB, aceitar permissões ou mexer no relógio.
-7. Com o checklist confirmado por ela, o branch entra no `main`:
+7. Com o checklist confirmado, **a Soraya junta o branch ao `main`** por um pull request no GitHub. Quem executa o plano não faz merge no `main` nem push. Os comandos de merge que aparecem no fim de cada plano ficam só como referência. Depois do merge, a etapa seguinte começa com:
    ```bash
-   git switch main && git merge --no-ff etapa-N-nome && git branch -d etapa-N-nome
+   git switch main && git pull && git switch -c etapa-N-nome
    ```
 
 ## Convenções de código
 
 - **Os identificadores no código ficam em inglês** (classes, métodos, variáveis e arquivos). **Os textos que aparecem na tela ficam em português**, exatamente como no design.
+- **As mensagens de commit ficam em inglês** (decisão de 2026-10-15). Os planos trazem as mensagens em português, e quem executa traduz cada uma, mantendo o prefixo (`feat:`, `chore:` etc.).
 - As ações descritas em português nas tabelas do design correspondem a estes nomes no código:
 
   | Design | Código |
