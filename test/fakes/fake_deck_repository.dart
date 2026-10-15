@@ -19,11 +19,8 @@ class FakeDeckRepository implements DeckRepository {
   }
 
   @override
-  Future<Result<List<Deck>>> getDecks() => _answer(
-        () => [..._decks]..sort(
-            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-          ),
-      );
+  Future<Result<List<Deck>>> getDecks() =>
+      _answer(() => [..._decks]..sort(Deck.compareByName));
 
   @override
   Future<Result<Deck>> getDeck(int id) async {
@@ -36,26 +33,26 @@ class FakeDeckRepository implements DeckRepository {
 
   @override
   Future<Result<Deck>> createDeck(String name) => _answer(() {
-        final deck = Deck(
-          id: _nextId++,
-          name: name.trim(),
-          createdAt: DateTime(2026, 10, 12),
-        );
-        _decks.add(deck);
-        return deck;
-      });
+    final deck = Deck(
+      id: _nextId++,
+      name: name.trim(),
+      createdAt: DateTime(2026, 10, 12),
+    );
+    _decks.add(deck);
+    return deck;
+  });
 
   @override
   Future<Result<void>> renameDeck(int id, String name) => _answer(() {
-        final index = _decks.indexWhere((d) => d.id == id);
-        final old = _decks[index];
-        _decks[index] = Deck(
-          id: id,
-          name: name.trim(),
-          createdAt: old.createdAt,
-          cardCount: old.cardCount,
-        );
-      });
+    final index = _decks.indexWhere((d) => d.id == id);
+    final old = _decks[index];
+    _decks[index] = Deck(
+      id: id,
+      name: name.trim(),
+      createdAt: old.createdAt,
+      cardCount: old.cardCount,
+    );
+  });
 
   @override
   Future<Result<void>> deleteDeck(int id) =>

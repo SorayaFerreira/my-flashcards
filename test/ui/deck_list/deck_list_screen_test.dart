@@ -11,11 +11,13 @@ void main() {
     WidgetTester tester,
     FakeDeckRepository repository,
   ) async {
-    await tester.pumpWidget(MaterialApp(
-      home: DeckListScreen(
-        viewModel: DeckListViewModel(deckRepository: repository),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeckListScreen(
+          viewModel: DeckListViewModel(deckRepository: repository),
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
   }
 
@@ -71,8 +73,9 @@ void main() {
     expect(criar.onPressed, isNull);
   });
 
-  testWidgets('o campo de nome não aceita mais de 50 caracteres',
-      (tester) async {
+  testWidgets('o campo de nome não aceita mais de 50 caracteres', (
+    tester,
+  ) async {
     await pumpScreen(tester, FakeDeckRepository());
 
     await tester.tap(find.byTooltip('Novo deck'));
@@ -99,8 +102,9 @@ void main() {
     expect(find.text('Verbos irregulares'), findsOneWidget);
   });
 
-  testWidgets('exclui depois de confirmar, avisando quantos cards somem',
-      (tester) async {
+  testWidgets('exclui depois de confirmar, avisando quantos cards somem', (
+    tester,
+  ) async {
     final repository = FakeDeckRepository([deck(1, 'Verbos', 42)]);
     await pumpScreen(tester, repository);
 
@@ -141,8 +145,9 @@ void main() {
     expect(repository.decks, hasLength(1));
   });
 
-  testWidgets('falha ao carregar mostra erro e permite tentar de novo',
-      (tester) async {
+  testWidgets('falha ao carregar mostra erro e permite tentar de novo', (
+    tester,
+  ) async {
     final repository = FakeDeckRepository([deck(1, 'Verbos', 0)])
       ..failWith = Exception('disco');
     await pumpScreen(tester, repository);

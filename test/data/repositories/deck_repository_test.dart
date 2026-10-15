@@ -18,11 +18,11 @@ void main() {
   tearDown(() => database.close());
 
   Future<void> insertCard(int deckId) => database.db.insert('cards', {
-        'deck_id': deckId,
-        'front_text': 'frente',
-        'back_text': 'verso',
-        'created_at': 0,
-      });
+    'deck_id': deckId,
+    'front_text': 'frente',
+    'back_text': 'verso',
+    'created_at': 0,
+  });
 
   test('cria um deck com o nome aparado e a data de criação', () async {
     final deck = okValue(await repository.createDeck('  Inglês  '));
@@ -40,6 +40,23 @@ void main() {
     final names = okValue(await repository.getDecks()).map((d) => d.name);
 
     expect(names, ['Abacate', 'banana', 'Cereja']);
+  });
+
+  test('lista sem diferenciar maiúsculas nem acentos', () async {
+    for (final name in [
+      'Zebra',
+      'Água',
+      'abacate',
+      'Época',
+      'Ônibus',
+      'época',
+    ]) {
+      await repository.createDeck(name);
+    }
+
+    final names = okValue(await repository.getDecks()).map((d) => d.name);
+
+    expect(names, ['abacate', 'Água', 'Época', 'época', 'Ônibus', 'Zebra']);
   });
 
   test('conta os cards de cada deck', () async {
@@ -70,8 +87,11 @@ void main() {
 
     expect(
       result,
-      isA<Error<dynamic>>()
-          .having((r) => r.error, 'error', isA<NotFoundException>()),
+      isA<Error<dynamic>>().having(
+        (r) => r.error,
+        'error',
+        isA<NotFoundException>(),
+      ),
     );
   });
 

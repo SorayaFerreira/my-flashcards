@@ -5,10 +5,10 @@ import '../view_models/deck_list_view_model.dart';
 import 'deck_name_dialog.dart';
 
 String cardCountLabel(int count) => switch (count) {
-      0 => 'Nenhum card',
-      1 => '1 card',
-      _ => '$count cards',
-    };
+  0 => 'Nenhum card',
+  1 => '1 card',
+  _ => '$count cards',
+};
 
 String deleteDeckMessage(Deck deck) {
   final cards = switch (deck.cardCount) {
@@ -170,7 +170,10 @@ class _LoadErrorView extends StatelessWidget {
         children: [
           Text(message),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: onRetry, child: const Text('Tentar de novo')),
+          OutlinedButton(
+            onPressed: onRetry,
+            child: const Text('Tentar de novo'),
+          ),
         ],
       ),
     );

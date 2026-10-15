@@ -24,6 +24,25 @@ class Deck {
     return null;
   }
 
+  /// Alphabetical order that ignores case and Portuguese accents, with [id]
+  /// as the tiebreak.
+  static int compareByName(Deck a, Deck b) {
+    final byName = _fold(a.name).compareTo(_fold(b.name));
+    return byName != 0 ? byName : a.id.compareTo(b.id);
+  }
+
+  static String _fold(String name) {
+    const from = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    const to = 'aaaaaeeeeiiiiooooouuuucn';
+    final buffer = StringBuffer();
+    for (final rune in name.toLowerCase().runes) {
+      final char = String.fromCharCode(rune);
+      final index = from.indexOf(char);
+      buffer.write(index == -1 ? char : to[index]);
+    }
+    return buffer.toString();
+  }
+
   @override
   bool operator ==(Object other) =>
       other is Deck &&

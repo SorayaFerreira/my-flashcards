@@ -22,6 +22,29 @@ void main() {
     });
   });
 
+  group('Deck.compareByName', () {
+    Deck deck(int id, String name) =>
+        Deck(id: id, name: name, createdAt: DateTime(2026));
+
+    test('ignora acentos e maiúsculas', () {
+      final decks = [deck(1, 'banana'), deck(2, 'Água'), deck(3, 'abacate')]
+        ..sort(Deck.compareByName);
+
+      expect(decks.map((d) => d.name), ['abacate', 'Água', 'banana']);
+    });
+
+    test('nomes iguais depois de simplificados desempatam pelo id', () {
+      expect(
+        Deck.compareByName(deck(1, 'época'), deck(2, 'Epoca')),
+        lessThan(0),
+      );
+      expect(
+        Deck.compareByName(deck(2, 'época'), deck(1, 'Epoca')),
+        greaterThan(0),
+      );
+    });
+  });
+
   test('dois decks com os mesmos dados são iguais', () {
     final createdAt = DateTime(2026, 10, 12);
     expect(

@@ -27,10 +27,10 @@ void main() {
   });
 
   test('apagar um deck apaga os cards dele', () async {
-    final deckId = await database.db.insert(
-      'decks',
-      {'name': 'Inglês', 'created_at': 0},
-    );
+    final deckId = await database.db.insert('decks', {
+      'name': 'Inglês',
+      'created_at': 0,
+    });
     await database.db.insert('cards', {
       'deck_id': deckId,
       'front_text': 'to give up',
@@ -44,14 +44,16 @@ void main() {
   });
 
   test('o contador de revisões começa em zero', () async {
-    final deckId = await database.db.insert(
-      'decks',
-      {'name': 'Inglês', 'created_at': 0},
-    );
-    await database.db.insert(
-      'cards',
-      {'deck_id': deckId, 'front_text': 'a', 'back_text': 'b', 'created_at': 0},
-    );
+    final deckId = await database.db.insert('decks', {
+      'name': 'Inglês',
+      'created_at': 0,
+    });
+    await database.db.insert('cards', {
+      'deck_id': deckId,
+      'front_text': 'a',
+      'back_text': 'b',
+      'created_at': 0,
+    });
 
     final card = (await database.db.query('cards')).single;
     expect(card['review_count'], 0);

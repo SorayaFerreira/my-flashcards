@@ -15,8 +15,9 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  late final _deckListViewModel =
-      DeckListViewModel(deckRepository: widget.dependencies.decks);
+  late final _deckListViewModel = DeckListViewModel(
+    deckRepository: widget.dependencies.decks,
+  );
 
   @override
   Widget build(BuildContext context) {

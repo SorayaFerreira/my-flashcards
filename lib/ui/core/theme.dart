@@ -6,13 +6,13 @@ abstract final class AppColors {
 }
 
 ThemeData buildLightTheme() => ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: AppColors.magenta)
-          .copyWith(primary: AppColors.magenta, onPrimary: Colors.white),
-    );
+  colorScheme: ColorScheme.fromSeed(seedColor: AppColors.magenta)
+      .copyWith(primary: AppColors.magenta, onPrimary: Colors.white),
+);
 
 ThemeData buildDarkTheme() => ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.magenta,
-        brightness: Brightness.dark,
-      ).copyWith(primary: AppColors.pink, onPrimary: Colors.black),
-    );
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: AppColors.magenta,
+    brightness: Brightness.dark,
+  ).copyWith(primary: AppColors.pink, onPrimary: Colors.black),
+);

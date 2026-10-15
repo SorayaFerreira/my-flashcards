@@ -6,8 +6,9 @@ import 'package:my_flashcards/app_dependencies.dart';
 import 'fakes/fake_deck_repository.dart';
 
 void main() {
-  testWidgets('abre na lista de decks, seguindo o tema do sistema',
-      (tester) async {
+  testWidgets('abre na lista de decks, seguindo o tema do sistema', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       App(dependencies: AppDependencies(decks: FakeDeckRepository())),
     );
