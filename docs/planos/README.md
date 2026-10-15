@@ -40,14 +40,16 @@ O Gradle usa o JDK 17 configurado no Flutter (`/usr/lib/jvm/java-17-openjdk`).
    5. fazer o commit.
 5. Ao fim da etapa, `flutter analyze` não pode mostrar nenhum problema e `flutter test` precisa passar inteiro.
 6. **Os testes no celular são feitos pela Soraya.** Quem executa o plano para nesse ponto e entrega a ela o checklist manual da etapa. Os itens do checklist só são marcados com o retorno dela, nunca por suposição. O mesmo vale para os passos que precisam do aparelho, como autorizar a depuração USB, aceitar permissões ou mexer no relógio.
-7. Com o checklist confirmado por ela, o branch entra no `main`:
+7. Com o checklist confirmado, **a Soraya junta o branch ao `main`** por um pull request no GitHub. Quem executa o plano não faz merge no `main` nem push. Os comandos de merge que aparecem no fim de cada plano ficam só como referência. Depois do merge, a etapa seguinte começa com:
    ```bash
-   git switch main && git merge --no-ff etapa-N-nome && git branch -d etapa-N-nome
+   git switch main && git pull && git switch -c etapa-N-nome
    ```
 
 ## Convenções de código
 
 - **Os identificadores no código ficam em inglês** (classes, métodos, variáveis e arquivos). **Os textos que aparecem na tela ficam em português**, exatamente como no design.
+- **As mensagens de commit ficam em inglês** (decisão de 2026-10-15). Os planos trazem as mensagens em português, e quem executa traduz cada uma, mantendo o prefixo (`feat:`, `chore:` etc.).
+- **Construtores com campo privado** (decisão de 2026-10-15). Os planos escrevem `Classe({required Tipo x}) : _x = x`, o que dispara o lint `prefer_initializing_formals` no Dart 3.13. A forma usada é o parâmetro nomeado privado, `Classe({required this._x})`: o campo continua privado, e quem chama continua passando `x:`.
 - As ações descritas em português nas tabelas do design correspondem a estes nomes no código:
 
   | Design | Código |
@@ -70,3 +72,7 @@ O Gradle usa o JDK 17 configurado no Flutter (`/usr/lib/jvm/java-17-openjdk`).
   - Repositórios são testados com SQLite em memória (`sqflite_common_ffi`).
   - ViewModels e telas são testados com repositórios falsos, que ficam em `test/fakes/`.
   - Os testes ficam em `test/`, espelhando a estrutura de `lib/`.
+  - Depois de `tester.enterText(...)`, sempre há um `await tester.pump();` antes de tocar num botão que depende do texto digitado. Sem esse quadro, o botão ainda está no estado anterior, por exemplo desativado (decisão de 2026-10-15).
+  - O `test/flutter_test_config.dart` silencia o `debugPrint` nos testes comuns (`test()`), onde o `guard` registra falhas esperadas.
+- **ViewModels:** todo ViewModel é `extends ChangeNotifier with DisposeSafeNotifier` (`lib/ui/core/dispose_safe_notifier.dart`). Assim, um `load()` que termina depois que a tela fechou não dispara o erro de "usado depois do dispose" (decisão de 2026-10-15).
+- **Formatação:** antes de cada commit, rodar `fvm dart format lib test`.

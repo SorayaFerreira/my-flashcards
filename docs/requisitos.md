@@ -88,6 +88,8 @@ Princípios: zero anúncios, zero recursos premium, app leve e visual limpo.
 | 2026-10-12 | Ambiente | Usar o Flutter 3.47.5 que já está instalado pelo FVM, e não instalar outro |
 | 2026-10-12 | Testes no celular | Feitos pela usuária. A execução dos planos para antes de cada checklist manual |
 | 2026-10-12 | Limites de mídia | Áudio de até 60 s. Imagens com no máximo 1280 px, em JPEG com qualidade 80 |
+| 2026-10-15 | Abertura do app | Mostra só o "F" do logo sobre fundo liso, na abertura nativa do Android, enquanto o app carrega. Sem tela com tempo fixo |
+| 2026-10-15 | Ordem dos decks | A ordem alfabética ignora maiúsculas e também acentos, para que "Água" e "Época" não fiquem depois do Z |
 | 2026-10-11 | Gestos na revisão | Arrastar para o lado vira e desvira o card. Os botões ‹ Anterior e Próximo › trocam de card |
 | 2026-10-11 | Contador | Sobe 1 na primeira vez que o verso é visto, no máximo uma vez por card em cada sessão |
 | 2026-10-11 | Ordem da revisão | Menos revisados primeiro, empates embaralhados. A usuária trocou de "aleatória" para esta opção |
