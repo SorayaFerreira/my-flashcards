@@ -156,6 +156,7 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
       label: label,
       controller: controller,
       isEmpty: _viewModel.draft(side).isEmpty,
+      autofocus: side == Side.front && _viewModel.isNew,
       onTextChanged: (text) => _viewModel.setText(side, text),
     );
   }

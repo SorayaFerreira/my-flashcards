@@ -221,4 +221,28 @@ void main() {
       expect(gated.cards.single.back.text, 'largar');
     },
   );
+
+  testWidgets('texto só com espaços não conta como preenchido', (tester) async {
+    await openEditor(tester);
+
+    await tester.enterText(textField(0), 'to give up');
+    await tester.pump();
+    await tester.enterText(textField(1), '  \n ');
+    await tester.pump();
+
+    expect(find.text('Adicione texto, imagem ou áudio'), findsOneWidget);
+    expect(saveButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('card novo abre com o cursor na frente', (tester) async {
+    await openEditor(tester);
+    expect(tester.widget<TextField>(textField(0)).autofocus, isTrue);
+    expect(tester.widget<TextField>(textField(1)).autofocus, isFalse);
+  });
+
+  testWidgets('card existente não abre com autofocus', (tester) async {
+    await openEditor(tester, cardId: 7);
+    expect(tester.widget<TextField>(textField(0)).autofocus, isFalse);
+    expect(tester.widget<TextField>(textField(1)).autofocus, isFalse);
+  });
 }

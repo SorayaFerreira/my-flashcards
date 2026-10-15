@@ -7,12 +7,14 @@ class SideEditor extends StatelessWidget {
     required this.controller,
     required this.isEmpty,
     required this.onTextChanged,
+    this.autofocus = false,
   });
 
   final String label;
   final TextEditingController controller;
   final bool isEmpty;
   final ValueChanged<String> onTextChanged;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +27,7 @@ class SideEditor extends StatelessWidget {
         TextField(
           controller: controller,
           onChanged: onTextChanged,
+          autofocus: autofocus,
           minLines: 1,
           maxLines: 6,
           textCapitalization: TextCapitalization.sentences,
