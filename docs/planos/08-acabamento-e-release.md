@@ -36,6 +36,8 @@
 
 ### Tarefa 1: splash nas cores do app (Android 12 ou mais novo)
 
+> **Já feita na etapa 1 (2026-10-15)**, de outro jeito: a abertura mostra só o "F" do logo (`drawable/splash_logo.xml`) sobre a cor `surface` do tema, configurada direto em `values/` e `values-night/` (o minSdk é 33, então não precisa das pastas `-v31`). Veja "Visual" no [design](../design.md). Nesta etapa, só confira no celular que a abertura continua certa e pule para o passo de criar o branch da tarefa 2.
+
 **Arquivos:**
 - Criar: `android/app/src/main/res/values-v31/styles.xml`
 - Criar: `android/app/src/main/res/values-night-v31/styles.xml`

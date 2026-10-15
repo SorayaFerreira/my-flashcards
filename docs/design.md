@@ -433,7 +433,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
   - As superfícies são quase neutras.
 - O tema claro ou escuro segue o sistema (`ThemeMode.system`).
 - A fonte é a padrão do sistema (Roboto). Nenhuma fonte é embutida.
-- Não há pacote de splash screen. O Android 13 já mostra o ícone do app na abertura, e a cor de fundo é ajustada na etapa de acabamento.
+- **Abertura (splash):** usa a tela de abertura nativa do Android 12+, sem pacote. Ela mostra só o "F" do logo (`drawable/splash_logo.xml`, um vetor feito a partir de `logo-f/logo_symbol.svg`) sobre a cor de fundo (`surface`) do tema do app: `#FFF7F9` no claro e `#171216` no escuro. Assim, a passagem da abertura para o app acontece sem salto de cor. A abertura fica na tela só enquanto o app carrega, sem tempo mínimo. Foi antecipada da etapa 8 para a etapa 1, a pedido da Soraya (2026-10-15).
 - O ícone é adaptativo e vem de `logo-f/`, incluindo a camada monocromática para os ícones temáticos do Android 13.
 
 ---
