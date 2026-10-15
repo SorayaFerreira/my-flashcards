@@ -1,12 +1,12 @@
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseService {
-  DatabaseService({required this.factory, required this.path});
+  DatabaseService({required this._factory, required this.path});
 
   static const schemaVersion = 1;
   static const fileName = 'flashcards.db';
 
-  final DatabaseFactory factory;
+  final DatabaseFactory _factory;
   final String path;
   Database? _db;
 
@@ -20,7 +20,7 @@ class DatabaseService {
 
   Future<void> open() async {
     if (_db != null) return;
-    _db = await factory.openDatabase(
+    _db = await _factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
         version: schemaVersion,
