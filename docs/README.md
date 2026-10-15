@@ -12,5 +12,7 @@ Esta pasta guarda os requisitos, o design e os planos de implementação do app.
 
 - **Requisitos:** fechados em 2026-10-11, com ajustes em 2026-10-12 (lembrete aleatório).
 - **Design:** todas as quatro partes aprovadas em 2026-10-12.
-- **Planos de implementação:** os nove planos (etapas 0 a 8) estão escritos em [planos/](planos/README.md) e aguardam revisão.
-- **Código:** nenhum. A implementação só começa depois que os planos forem aprovados.
+- **Planos de implementação:** os nove planos (etapas 0 a 8) estão em [planos/](planos/README.md) e foram aprovados em 2026-10-12. A execução é feita por agentes, uma tarefa por vez, com revisão depois de cada tarefa. Os testes no celular ficam com a Soraya.
+- **Código:**
+  - **Etapa 0** concluída em 2026-10-15: projeto criado e app vazio rodando no celular, com o ícone do logo (margem padrão de 16% em volta do "F").
+  - **Próxima:** etapa 1, banco de dados e tela de decks.
