@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The "F" from logo-f/logo_symbol.svg, sized for the Android 12+ splash:
+     a 288dp canvas whose central 192dp circle holds the 512-unit SVG. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="768"
+    android:viewportHeight="768">
+    <group
+        android:translateX="128"
+        android:translateY="128">
+        <path
+            android:pathData="M134,458C140,338 138,187 136,62C208,67 283,64 362,63"
+            android:strokeColor="#C52DC3"
+            android:strokeWidth="24"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M138,244C183,260 226,260 275,250"
+            android:strokeColor="#C52DC3"
+            android:strokeWidth="24"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M161,452C163,323 160,207 162,87C233,84 313,84 390,87"
+            android:strokeColor="#F05BD3"
+            android:strokeWidth="13"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M162,260C207,276 257,275 311,265"
+            android:strokeColor="#F05BD3"
+            android:strokeWidth="13"
+            android:strokeLineCap="round" />
+    </group>
+</vector>
