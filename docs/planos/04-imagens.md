@@ -1776,6 +1776,8 @@ class CardSideView extends StatelessWidget {
 
 - [ ] **Passo 5: imagem no `SideEditor`**
 
+> **Ajuste da etapa 2 (2026-10-15):** o `SideEditor` tem o parâmetro opcional `autofocus` (padrão `false`), repassado ao `TextField` do texto. Ao substituir o arquivo, mantenha esse parâmetro.
+
 `lib/ui/card_editor/widgets/side_editor.dart` (substitui o arquivo inteiro):
 ```dart
 import 'package:flutter/material.dart';
@@ -1877,6 +1879,8 @@ class SideEditor extends StatelessWidget {
 ```
 
 - [ ] **Passo 6: ligar a imagem na tela do editor**
+
+> **Ajuste da etapa 2 (2026-10-15):** a tela já desativa a 🗑 (`onPressed: _viewModel.isSaving ? null : _delete`) e o voltar (`canPop: !_viewModel.hasChanges && !_viewModel.isSaving`, e o diálogo de descarte só aparece com `!didPop && !_viewModel.isSaving`) enquanto salva, e passa `autofocus: side == Side.front && _viewModel.isNew` ao `SideEditor`. Mantenha isso ao mexer na tela.
 
 Em `lib/ui/card_editor/widgets/card_editor_screen.dart`:
 

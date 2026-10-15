@@ -1620,6 +1620,8 @@ class AudioRecorderField extends StatelessWidget {
 
 - [ ] **Passo 5: áudio no `SideEditor`**
 
+> **Ajuste da etapa 2 (2026-10-15):** o `SideEditor` tem o parâmetro opcional `autofocus` (padrão `false`), repassado ao `TextField` do texto. Ao substituir o arquivo, mantenha esse parâmetro.
+
 `lib/ui/card_editor/widgets/side_editor.dart` (substitui o arquivo inteiro):
 ```dart
 import 'package:flutter/material.dart';
@@ -1725,6 +1727,8 @@ class SideEditor extends StatelessWidget {
 ```
 
 - [ ] **Passo 6: a tela do editor com áudio**
+
+> **Ajuste da etapa 2 (2026-10-15):** o arquivo abaixo precisa manter as proteções de quando o card está salvando: `onPressed: _viewModel.isSaving ? null : _delete` na 🗑, `!_viewModel.isSaving` somado ao `canPop`, o diálogo de descarte só com `!didPop && !_viewModel.isSaving`, e `autofocus: side == Side.front && _viewModel.isNew` no `SideEditor`. Os testes "enquanto salva, a lixeira fica desativada e o voltar não faz nada" e "card novo abre com o cursor na frente" precisam continuar passando.
 
 `lib/ui/card_editor/widgets/card_editor_screen.dart` (substitui o arquivo inteiro):
 ```dart

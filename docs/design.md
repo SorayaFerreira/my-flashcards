@@ -341,6 +341,8 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 - **🗑** só aparece ao editar um card existente. Ele pede confirmação (*"Excluir este card?"*), apaga e volta.
 - **Voltar com alterações não salvas** pergunta *"Descartar alterações?"*, com as opções Continuar editando e Descartar.
 - O título é "Novo card" ou "Editar card".
+- Num card novo, o cursor já começa no texto da **frente**, com o teclado aberto.
+- **Enquanto salva**, a 🗑 fica desativada e o voltar não faz nada. Sem isso, o fim do salvamento podia fechar o diálogo de exclusão como se fosse uma confirmação (decisão de 2026-10-15).
 
 ### 4. Revisão
 
