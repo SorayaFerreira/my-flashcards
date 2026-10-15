@@ -49,6 +49,7 @@ O Gradle usa o JDK 17 configurado no Flutter (`/usr/lib/jvm/java-17-openjdk`).
 
 - **Os identificadores no código ficam em inglês** (classes, métodos, variáveis e arquivos). **Os textos que aparecem na tela ficam em português**, exatamente como no design.
 - **As mensagens de commit ficam em inglês** (decisão de 2026-10-15). Os planos trazem as mensagens em português, e quem executa traduz cada uma, mantendo o prefixo (`feat:`, `chore:` etc.).
+- **Construtores com campo privado** (decisão de 2026-10-15). Os planos escrevem `Classe({required Tipo x}) : _x = x`, o que dispara o lint `prefer_initializing_formals` no Dart 3.13. A forma usada é o parâmetro nomeado privado, `Classe({required this._x})`: o campo continua privado, e quem chama continua passando `x:`.
 - As ações descritas em português nas tabelas do design correspondem a estes nomes no código:
 
   | Design | Código |
