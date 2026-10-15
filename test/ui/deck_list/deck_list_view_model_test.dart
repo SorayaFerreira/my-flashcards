@@ -23,6 +23,13 @@ void main() {
     expect(viewModel.loadError, isNull);
   });
 
+  test('load termina sem erro se o ViewModel for descartado no meio', () async {
+    final future = viewModel.load();
+    viewModel.dispose();
+
+    await future;
+  });
+
   test('load avisa os ouvintes ao começar e ao terminar', () async {
     var notifications = 0;
     viewModel.addListener(() => notifications++);

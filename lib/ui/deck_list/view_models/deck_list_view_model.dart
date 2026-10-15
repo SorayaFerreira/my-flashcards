@@ -3,8 +3,9 @@ import 'package:flutter/foundation.dart';
 import '../../../data/repositories/deck_repository.dart';
 import '../../../domain/models/deck.dart';
 import '../../../utils/result.dart';
+import '../../core/dispose_safe_notifier.dart';
 
-class DeckListViewModel extends ChangeNotifier {
+class DeckListViewModel extends ChangeNotifier with DisposeSafeNotifier {
   DeckListViewModel({required this._deckRepository});
 
   static const loadErrorMessage = 'Não foi possível carregar os decks.';
