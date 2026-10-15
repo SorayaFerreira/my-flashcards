@@ -266,7 +266,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 └───────────────────────────────┘
 ```
 
-- Os decks aparecem em **ordem alfabética**, sem diferenciar maiúsculas de minúsculas. Cada um mostra o nome e a quantidade de cards.
+- Os decks aparecem em **ordem alfabética**, sem diferenciar maiúsculas de minúsculas nem letras com e sem acento: "Água" fica entre "abacate" e "banana". A ordenação é feita no Dart (`Deck.compareByName`), porque o `COLLATE NOCASE` do SQLite só ignora maiúsculas nas letras sem acento. Cada deck mostra o nome e a quantidade de cards.
 - **Tocar num deck** abre a tela do deck.
 - **⋮** abre o menu com **Renomear** e **Excluir**.
 - **(+)** abre o diálogo "Novo deck", com um campo de nome e os botões Cancelar e Criar.

@@ -72,3 +72,7 @@ O Gradle usa o JDK 17 configurado no Flutter (`/usr/lib/jvm/java-17-openjdk`).
   - Repositórios são testados com SQLite em memória (`sqflite_common_ffi`).
   - ViewModels e telas são testados com repositórios falsos, que ficam em `test/fakes/`.
   - Os testes ficam em `test/`, espelhando a estrutura de `lib/`.
+  - Depois de `tester.enterText(...)`, sempre há um `await tester.pump();` antes de tocar num botão que depende do texto digitado. Sem esse quadro, o botão ainda está no estado anterior, por exemplo desativado (decisão de 2026-10-15).
+  - O `test/flutter_test_config.dart` silencia o `debugPrint` nos testes comuns (`test()`), onde o `guard` registra falhas esperadas.
+- **ViewModels:** todo ViewModel é `extends ChangeNotifier with DisposeSafeNotifier` (`lib/ui/core/dispose_safe_notifier.dart`). Assim, um `load()` que termina depois que a tela fechou não dispara o erro de "usado depois do dispose" (decisão de 2026-10-15).
+- **Formatação:** antes de cada commit, rodar `fvm dart format lib test`.
