@@ -160,6 +160,7 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
       controller: controller,
       isEmpty: _viewModel.draft(side).isEmpty,
       autofocus: side == Side.front && _viewModel.isNew,
+      mediaEnabled: !_viewModel.isSaving,
       onTextChanged: (text) => _viewModel.setText(side, text),
       imagePath: _viewModel.imagePath(side),
       onTakePhoto: () => _pickImage(side, ImageOrigin.camera),

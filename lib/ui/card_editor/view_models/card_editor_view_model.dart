@@ -32,6 +32,10 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   SideDraft _initialBack = const SideDraft();
   bool _isLoading = false;
   bool _isSaving = false;
+  bool _isPicking = false;
+
+  /// New files already moved to the media folder while a save is running.
+  final Set<String> _committed = {};
   String? _loadError;
   String? _actionError;
 
@@ -59,7 +63,7 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   String? imagePath(Side side) {
     final image = draft(side).image;
     if (image == null) return null;
-    return image.isNew
+    return image.isNew && !_committed.contains(image.name)
         ? _mediaRepository.draftPath(image.name)
         : _mediaRepository.mediaPath(image.name);
   }
@@ -87,14 +91,28 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
 
   /// Returns false only when the picker failed; cancelling is not a failure.
   Future<bool> pickImage(Side side, ImageOrigin origin) async {
-    switch (await _mediaRepository.pickImage(origin)) {
+    if (_isSaving || _isPicking) return true;
+    _isPicking = true;
+    final Result<String?> result;
+    try {
+      result = await _mediaRepository.pickImage(origin);
+    } finally {
+      _isPicking = false;
+    }
+    switch (result) {
       case Ok(value: final name?):
+        if (_isSaving || isDisposed) {
+          // The save already took its snapshot; this file would be lost.
+          await _mediaRepository.discardDrafts([name]);
+          return true;
+        }
         await _dropIfNew(draft(side).image);
         _setDraft(side, draft(side).withImage(DraftFile(name, isNew: true)));
         return true;
       case Ok():
         return true;
       case Error():
+        if (isDisposed) return true;
         _actionError = imageErrorMessage;
         notifyListeners();
         return false;
@@ -102,6 +120,7 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   }
 
   Future<void> removeImage(Side side) async {
+    if (_isSaving) return;
     await _dropIfNew(draft(side).image);
     _setDraft(side, draft(side).withImage(null));
   }
@@ -112,14 +131,17 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
     _actionError = null;
     notifyListeners();
 
-    final newFiles = [..._front.newFileNames, ..._back.newFileNames];
+    // Everything below uses this snapshot, never the live drafts.
+    final frontDraft = _front, backDraft = _back;
+    final newFiles = [...frontDraft.newFileNames, ...backDraft.newFileNames];
+    final front = frontDraft.toCardSide();
+    final back = backDraft.toCardSide();
     if (await _mediaRepository.commitDrafts(newFiles) is Error) {
       await _mediaRepository.revertCommit(newFiles);
       return _saveFailed();
     }
+    _committed.addAll(newFiles);
 
-    final front = _front.toCardSide();
-    final back = _back.toCardSide();
     final id = cardId;
     final result = id == null
         ? await _cardRepository.createCard(
@@ -133,6 +155,7 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
       return _saveFailed();
     }
 
+    _committed.clear();
     _isSaving = false;
     _front = _initialFront = SideDraft.fromCardSide(front);
     _back = _initialBack = SideDraft.fromCardSide(back);
@@ -160,6 +183,7 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   ]);
 
   bool _saveFailed() {
+    _committed.clear();
     _isSaving = false;
     _actionError = saveErrorMessage;
     notifyListeners();

@@ -14,6 +14,7 @@ class SideEditor extends StatelessWidget {
     required this.onPickFromGallery,
     required this.onRemoveImage,
     this.autofocus = false,
+    this.mediaEnabled = true,
   });
 
   final String label;
@@ -25,6 +26,7 @@ class SideEditor extends StatelessWidget {
   final VoidCallback onPickFromGallery;
   final VoidCallback onRemoveImage;
   final bool autofocus;
+  final bool mediaEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -53,12 +55,12 @@ class SideEditor extends StatelessWidget {
             spacing: 8,
             children: [
               OutlinedButton.icon(
-                onPressed: onTakePhoto,
+                onPressed: mediaEnabled ? onTakePhoto : null,
                 icon: const Icon(Icons.photo_camera_outlined),
                 label: const Text('Câmera'),
               ),
               OutlinedButton.icon(
-                onPressed: onPickFromGallery,
+                onPressed: mediaEnabled ? onPickFromGallery : null,
                 icon: const Icon(Icons.photo_library_outlined),
                 label: const Text('Galeria'),
               ),
@@ -78,7 +80,7 @@ class SideEditor extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: onRemoveImage,
+                onPressed: mediaEnabled ? onRemoveImage : null,
                 tooltip: 'Remover imagem',
                 icon: const Icon(Icons.close),
               ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/domain/models/card_side.dart';
 import 'package:my_flashcards/domain/models/flashcard.dart';
@@ -288,5 +290,117 @@ void main() {
 
       expect(media.discarded, ['img_nova.jpg']);
     });
+  });
+
+  group('imagens e salvamento', () {
+    // A new card with a picked front image and back text, ready to save.
+    Future<CardEditorViewModel> readyToSave() async {
+      media.nextPick = 'img_1.jpg';
+      final viewModel = newCard()..setText(Side.back, 'b');
+      await viewModel.pickImage(Side.front, ImageOrigin.camera);
+      return viewModel;
+    }
+
+    test('foto que chega durante o commit não é salva', () async {
+      final viewModel = await readyToSave();
+      media.pickGate = Completer();
+      media.nextPick = 'img_tardia.jpg';
+      final pick = viewModel.pickImage(Side.back, ImageOrigin.gallery);
+      media.commitGate = Completer();
+      final save = viewModel.save();
+      await pumpEventQueue();
+
+      media.pickGate!.complete();
+      await pick;
+      media.commitGate!.complete();
+
+      expect(await save, isTrue);
+      expect(cards.cards.last.back.image, isNull);
+      expect(media.discarded, ['img_tardia.jpg']);
+    });
+
+    test('pickImage durante o salvamento não chama o seletor', () async {
+      final viewModel = await readyToSave();
+      media.commitGate = Completer();
+      final save = viewModel.save();
+      await pumpEventQueue();
+      final before = media.picks.length;
+
+      expect(await viewModel.pickImage(Side.back, ImageOrigin.camera), isTrue);
+
+      expect(media.picks.length, before);
+      media.commitGate!.complete();
+      await save;
+    });
+
+    test('removeImage durante o salvamento não muda nada', () async {
+      final viewModel = await readyToSave();
+      media.commitGate = Completer();
+      final save = viewModel.save();
+      await pumpEventQueue();
+
+      await viewModel.removeImage(Side.front);
+      media.commitGate!.complete();
+
+      expect(await save, isTrue);
+      expect(cards.cards.last.front.image, 'img_1.jpg');
+      expect(media.discarded, isEmpty);
+    });
+
+    test('durante a gravação a imagem já aponta para media', () async {
+      final viewModel = await readyToSave();
+      cards.createGate = Completer();
+      final save = viewModel.save();
+      await pumpEventQueue();
+
+      expect(viewModel.imagePath(Side.front), '/media/img_1.jpg');
+
+      cards.createGate!.complete();
+      await save;
+      expect(viewModel.imagePath(Side.front), '/media/img_1.jpg');
+    });
+
+    test('se o banco falhar, o caminho volta para o rascunho', () async {
+      final viewModel = await readyToSave();
+      cards.failWith = Exception('disco');
+
+      await viewModel.save();
+
+      expect(viewModel.imagePath(Side.front), '/drafts/img_1.jpg');
+    });
+
+    test('dois pickImage ao mesmo tempo chamam o seletor uma vez', () async {
+      media.pickGate = Completer();
+      media.nextPick = 'img_1.jpg';
+      final viewModel = newCard();
+
+      final first = viewModel.pickImage(Side.front, ImageOrigin.camera);
+      final second = viewModel.pickImage(Side.front, ImageOrigin.camera);
+      media.pickGate!.complete();
+
+      expect(await second, isTrue);
+      expect(await first, isTrue);
+      expect(media.picks.length, 1);
+      expect(viewModel.actionError, isNull);
+    });
+
+    test(
+      'um card salvo com imagem que não existe mostra o caminho de media',
+      () async {
+        cards = FakeCardRepository([
+          Flashcard(
+            id: 7,
+            deckId: 1,
+            front: const CardSide(text: 'a', image: 'img_salva.jpg'),
+            back: const CardSide(text: 'b'),
+            createdAt: DateTime(2026),
+          ),
+        ]);
+        final viewModel = editCard();
+        await viewModel.load();
+
+        expect(viewModel.imagePath(Side.front), '/media/img_salva.jpg');
+      },
+    );
   });
 }

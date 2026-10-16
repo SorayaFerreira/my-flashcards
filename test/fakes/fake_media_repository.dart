@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:my_flashcards/data/repositories/media_repository.dart';
 import 'package:my_flashcards/domain/models/image_origin.dart';
 import 'package:my_flashcards/utils/result.dart';
@@ -10,6 +12,10 @@ class FakeMediaRepository implements MediaRepository {
   Object? nextPick;
   Exception? commitError;
 
+  /// When set, [pickImage] / [commitDrafts] wait for it before answering.
+  Completer<void>? pickGate;
+  Completer<void>? commitGate;
+
   final picks = <ImageOrigin>[];
   final committed = <String>[];
   final reverted = <String>[];
@@ -19,6 +25,7 @@ class FakeMediaRepository implements MediaRepository {
   @override
   Future<Result<String?>> pickImage(ImageOrigin origin) async {
     picks.add(origin);
+    await pickGate?.future;
     final next = nextPick;
     if (next is Exception) return Result.error(next);
     return Result.ok(next as String?);
@@ -32,6 +39,7 @@ class FakeMediaRepository implements MediaRepository {
 
   @override
   Future<Result<void>> commitDrafts(Iterable<String> names) async {
+    await commitGate?.future;
     final error = commitError;
     if (error != null) return Result.error(error);
     committed.addAll(names);

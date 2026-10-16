@@ -309,4 +309,49 @@ void main() {
     expect(find.text('Câmera'), findsNWidgets(2));
     expect(media.discarded, ['img_1.jpg']);
   });
+
+  testWidgets('enquanto salva, Câmera, Galeria e ✕ ficam desativados', (
+    tester,
+  ) async {
+    media.nextPick = 'img_1.jpg';
+    await openEditor(tester);
+    await tester.tap(find.text('Câmera').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(textField(1), 'desistir');
+    await tester.pump();
+    media.commitGate = Completer();
+
+    await tester.tap(find.text('SALVAR'));
+    await tester.pump();
+
+    final camera = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Câmera'),
+    );
+    expect(camera.onPressed, isNull);
+    final remove = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.close),
+    );
+    expect(remove.onPressed, isNull);
+
+    media.commitGate!.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('imagem salva que sumiu mostra "Imagem não encontrada"', (
+    tester,
+  ) async {
+    cards = FakeCardRepository([
+      Flashcard(
+        id: 7,
+        deckId: 1,
+        front: const CardSide(text: 'a', image: 'img_salva.jpg'),
+        back: const CardSide(text: 'b'),
+        createdAt: DateTime(2026),
+      ),
+    ]);
+
+    await openEditor(tester, cardId: 7);
+
+    expect(find.text('Imagem não encontrada'), findsOneWidget);
+  });
 }
