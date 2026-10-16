@@ -46,6 +46,8 @@ As versões foram conferidas no pub.dev em 2026-10-11. O plano de cada etapa adi
 
 O `flutter create` também adiciona o `cupertino_icons`, que é removido na etapa 0 porque o app só usa ícones do Material. O `flutter_lints` (dev) continua, porque o `analysis_options.yaml` depende dele.
 
+Na etapa 4, `image_picker_android` e `image_picker_platform_interface` viraram dependências diretas. Eles já vinham com o `image_picker` e não acrescentam nada ao APK; servem só para ligar o seletor de fotos do Android (`useAndroidPhotoPicker = true`), que o plugin só usa sozinho a partir do Android 16 (decisão de 2026-10-16).
+
 ### Ambiente de desenvolvimento (conferido em 2026-10-12)
 
 - **Flutter:** 3.47.5 estável (Dart 3.13.4), instalado pelo **FVM** 4.1.2 como versão global. O projeto fixa essa versão com `.fvmrc`. No terminal da usuária, `flutter` é um alias de `fvm flutter`; em shells não interativos, o comando é `fvm flutter`. O `/usr/bin/dart` (3.13.5) do sistema **não** é o Dart do Flutter: use `fvm dart`.
@@ -448,11 +450,13 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 
 - **Origem:** `image_picker`, com `ImageSource.camera` ou `ImageSource.gallery`.
   - **Câmera:** abre o app de câmera do sistema. Como o app **não declara** a permissão `CAMERA` no manifesto, o Android não pede essa permissão.
-  - **Galeria:** usa o seletor de fotos do Android 13, sem pedir acesso às suas fotos.
+  - **Galeria:** usa o seletor de fotos do Android 13, sem pedir acesso às suas fotos. O `AppDependencies.create()` liga o `useAndroidPhotoPicker` do `image_picker_android`; sem isso, no Android 13 a 15 a galeria abriria o seletor de arquivos.
 - **Compressão na captura:** `maxWidth: 1280`, `maxHeight: 1280` e `imageQuality: 80`. Cada imagem fica em torno de **100 a 300 KB**.
 - **Nome do arquivo:** `img_<epoch-ms>_<4 caracteres aleatórios>.<extensão original>`. O arquivo vai para `editor_tmp/` e, ao salvar o card, para `media/`, como descrito na parte 1.
 - **Exibição leve:** `Image.file` recebe `cacheWidth` igual à largura em que a imagem aparece na tela (miniatura de cerca de 300 px no editor; largura do card na revisão). Assim, o Flutter decodifica a imagem já pequena e gasta menos memória.
 - **Arquivo sumido:** se o arquivo de uma imagem não for encontrado, aparece um quadro cinza escrito *"Imagem não encontrada"*. O app não trava.
+- **Sobras do `image_picker`:** o plugin deixa cópias das fotos na pasta de cache (pastas com nome de UUID, arquivos `scaled_*` e fotos temporárias da câmera). Ao abrir o app, junto com a limpeza de `editor_tmp/`, o `MediaFileService.clearPickerLeftovers()` apaga só esses itens (decisão de 2026-10-16).
+- **Enquanto salva:** Câmera, Galeria e ✕ ficam desativados, e uma imagem que chegar do seletor durante o salvamento é descartada. O `save()` usa os lados como estavam ao tocar em SALVAR, então nunca grava no banco o nome de um arquivo que ainda está em `editor_tmp/` (decisão de 2026-10-16).
 
 ### Áudio
 

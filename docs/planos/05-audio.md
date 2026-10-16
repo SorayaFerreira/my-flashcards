@@ -583,6 +583,8 @@ Esperado: FALHA de compilação (`audio` não existe).
 
 - [ ] **Passo 3: implementar**
 
+> **Ajuste da etapa 4 (2026-10-16):** o `SideDraft` atual é o da etapa 4. Ao substituir o arquivo, mantenha `DraftFile`, `newFileNames` e o restante do contrato de imagem.
+
 `lib/ui/card_editor/view_models/side_draft.dart` (substitui o arquivo inteiro):
 ```dart
 import '../../../domain/models/card_side.dart';
@@ -854,6 +856,8 @@ flutter test test/ui/card_editor/card_editor_view_model_test.dart
 Esperado: FALHA de compilação (`startRecording` não existe).
 
 - [ ] **Passo 3: implementar**
+
+> **Ajustes das etapas 2 a 4 que este arquivo precisa manter (2026-10-16):** `extends ChangeNotifier with DisposeSafeNotifier`; parâmetros nomeados privados (`required this._cardRepository`, `required this._mediaRepository`); no `save()`, a foto dos lados (`frontDraft`/`backDraft`, `newFiles`, `front`/`back`) tirada **antes** do primeiro `await`; o conjunto `_committed`, que faz o `imagePath` apontar para `media/` durante a gravação no banco; o `_isPicking` contra toque duplo; `pickImage` e `removeImage` sem efeito enquanto salva, com o descarte do rascunho que chegar tarde. Aplique a mesma regra ao áudio: gravar, parar e remover áudio não mexem nos lados enquanto salva, e um áudio que terminar de gravar durante o salvamento é descartado. Os testes desses comportamentos precisam continuar passando.
 
 `lib/ui/card_editor/view_models/card_editor_view_model.dart` (substitui o arquivo inteiro):
 ```dart
@@ -1620,6 +1624,8 @@ class AudioRecorderField extends StatelessWidget {
 
 - [ ] **Passo 5: áudio no `SideEditor`**
 
+> **Ajuste da etapa 4 (2026-10-16):** o `SideEditor` também tem `mediaEnabled` (padrão `true`), que desativa Câmera, Galeria e ✕ enquanto salva. Mantenha esse parâmetro e use-o também nos botões de áudio.
+
 > **Ajuste da etapa 2 (2026-10-15):** o `SideEditor` tem o parâmetro opcional `autofocus` (padrão `false`), repassado ao `TextField` do texto. Ao substituir o arquivo, mantenha esse parâmetro.
 
 `lib/ui/card_editor/widgets/side_editor.dart` (substitui o arquivo inteiro):
@@ -1727,6 +1733,8 @@ class SideEditor extends StatelessWidget {
 ```
 
 - [ ] **Passo 6: a tela do editor com áudio**
+
+> **Ajuste da etapa 4 (2026-10-16):** a tela passa `mediaEnabled: !_viewModel.isSaving` ao `SideEditor`. Mantenha.
 
 > **Ajuste da etapa 2 (2026-10-15):** o arquivo abaixo precisa manter as proteções de quando o card está salvando: `onPressed: _viewModel.isSaving ? null : _delete` na 🗑, `!_viewModel.isSaving` somado ao `canPop`, o diálogo de descarte só com `!didPop && !_viewModel.isSaving`, e `autofocus: side == Side.front && _viewModel.isNew` no `SideEditor`. Os testes "enquanto salva, a lixeira fica desativada e o voltar não faz nada" e "card novo abre com o cursor na frente" precisam continuar passando.
 

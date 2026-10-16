@@ -1992,6 +1992,8 @@ git commit -m "feat: mostra e edita imagens no editor e na revisão"
 
 ### Tarefa 6: conferir no celular e fechar a etapa
 
+> **Ajustes feitos na execução (2026-10-16):** depois da revisão final, a etapa ganhou o seletor de fotos do Android ligado no `AppDependencies.create()`, a limpeza das sobras do `image_picker` no cache ao abrir o app, e as proteções do `save()` (foto dos lados antes de mover os arquivos; Câmera, Galeria e ✕ desativados enquanto salva). Os três itens novos do checklist abaixo conferem isso no celular.
+
 **Arquivos:** nenhum.
 
 - [ ] **Passo 1: rodar no celular**
@@ -2004,6 +2006,8 @@ flutter run
 
 - [ ] No editor, **Câmera** abre a câmera do sistema **sem pedir permissão**. A foto tirada aparece como miniatura
 - [ ] **Galeria** abre o seletor de fotos do Android **sem pedir permissão**
+- [ ] O seletor que abre é o **seletor de fotos do Android** (grade de fotos e álbuns), e não o gerenciador de arquivos
+- [ ] Uma foto tirada **em pé** (retrato) aparece em pé no editor e na revisão
 - [ ] Cancelar a câmera ou a galeria volta ao editor sem mensagem de erro
 - [ ] **✕** remove a imagem, e os botões Câmera e Galeria voltam
 - [ ] Um card com a frente só com imagem e o verso com texto pode ser salvo. Na lista, ele aparece como *"(só imagem)"* com o ícone de imagem
@@ -2017,6 +2021,10 @@ flutter run
 - [ ] Escolher uma imagem e **descartar** o editor não deixa arquivo sobrando:
   ```bash
   adb shell run-as com.sorayaferreira.myflashcards ls -l cache/editor_tmp
+  ```
+- [ ] Depois de escolher algumas fotos da galeria, fechar e abrir o app de novo não deixa sobras no cache (nenhuma pasta com nome longo de letras e números):
+  ```bash
+  adb shell run-as com.sorayaferreira.myflashcards ls cache
   ```
 - [ ] Apagar um arquivo à mão (`adb shell run-as com.sorayaferreira.myflashcards rm app_flutter/media/<nome>`) faz o card mostrar *"Imagem não encontrada"*, e o app não trava
 
