@@ -20,9 +20,17 @@ String deleteDeckMessage(Deck deck) {
 }
 
 class DeckListScreen extends StatefulWidget {
-  const DeckListScreen({super.key, required this.viewModel});
+  const DeckListScreen({
+    super.key,
+    required this.viewModel,
+    required this.onOpenDeck,
+  });
 
   final DeckListViewModel viewModel;
+
+  /// Opens a deck. The list reloads when it completes, because the user may
+  /// have added or removed cards meanwhile.
+  final Future<void> Function(Deck deck) onOpenDeck;
 
   @override
   State<DeckListScreen> createState() => _DeckListScreenState();
@@ -43,6 +51,11 @@ class _DeckListScreenState extends State<DeckListScreen> {
   void dispose() {
     _viewModel.dispose();
     super.dispose();
+  }
+
+  Future<void> _openDeck(Deck deck) async {
+    await widget.onOpenDeck(deck);
+    if (mounted) await _viewModel.load();
   }
 
   Future<void> _createDeck() async {
@@ -139,6 +152,7 @@ class _DeckListScreenState extends State<DeckListScreen> {
         return ListTile(
           title: Text(deck.name),
           subtitle: Text(cardCountLabel(deck.cardCount)),
+          onTap: () => _openDeck(deck),
           trailing: PopupMenuButton<_DeckAction>(
             tooltip: 'Opções do deck',
             onSelected: (action) => switch (action) {

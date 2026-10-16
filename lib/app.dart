@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_dependencies.dart';
+import 'routes.dart';
 import 'ui/core/theme.dart';
 import 'ui/deck_list/view_models/deck_list_view_model.dart';
 import 'ui/deck_list/widgets/deck_list_screen.dart';
@@ -15,6 +16,7 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
+  late final _routes = AppRoutes(widget.dependencies);
   late final _deckListViewModel = DeckListViewModel(
     deckRepository: widget.dependencies.decks,
   );
@@ -27,7 +29,13 @@ class _AppState extends State<App> {
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: ThemeMode.system,
-      home: DeckListScreen(viewModel: _deckListViewModel),
+      home: Builder(
+        builder: (context) => DeckListScreen(
+          viewModel: _deckListViewModel,
+          onOpenDeck: (deck) =>
+              Navigator.of(context).push(_routes.deckDetail(deck.id)),
+        ),
+      ),
     );
   }
 }

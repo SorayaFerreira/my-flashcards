@@ -1455,6 +1455,8 @@ git commit -m "feat: cria o CardEditorViewModel para cards de texto"
 
 ### Tarefa 6: tela do editor de card
 
+> **Ajustes feitos na execução (2026-10-15):** depois da revisão final, a tela ganhou as proteções de quando o card está salvando (🗑 desativada, voltar sem efeito) e o cursor na frente num card novo (`SideEditor.autofocus`), cada um com teste. Os testes que tocam num botão logo depois de `enterText` ganharam um `await tester.pump();` antes do toque.
+
 **Arquivos:**
 - Criar: `lib/ui/card_editor/widgets/side_editor.dart`
 - Criar: `lib/ui/card_editor/widgets/card_editor_screen.dart`

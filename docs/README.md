@@ -15,5 +15,6 @@ Esta pasta guarda os requisitos, o design e os planos de implementação do app.
 - **Planos de implementação:** os nove planos (etapas 0 a 8) estão em [planos/](planos/README.md) e foram aprovados em 2026-10-12. A execução é feita por agentes, uma tarefa por vez, com revisão depois de cada tarefa. Os testes no celular ficam com a Soraya.
 - **Código:**
   - **Etapa 0** concluída em 2026-10-15: projeto criado e app vazio rodando no celular, com o ícone do logo (margem padrão de 16% em volta do "F").
-  - **Etapa 1** implementada em 2026-10-15 (banco de dados e tela de decks). Falta o teste no celular.
-  - **Próxima:** etapa 2, cards de texto.
+  - **Etapa 1** concluída em 2026-10-15: banco de dados, tela de decks e a abertura com o logo.
+  - **Etapa 2** implementada em 2026-10-15 (cards de texto: tela do deck e editor). Falta o teste no celular.
+  - **Próxima:** etapa 3, revisão.

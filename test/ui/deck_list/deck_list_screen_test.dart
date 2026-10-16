@@ -9,12 +9,14 @@ import '../../fakes/fake_deck_repository.dart';
 void main() {
   Future<void> pumpScreen(
     WidgetTester tester,
-    FakeDeckRepository repository,
-  ) async {
+    FakeDeckRepository repository, {
+    Future<void> Function(Deck deck)? onOpenDeck,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DeckListScreen(
           viewModel: DeckListViewModel(deckRepository: repository),
+          onOpenDeck: onOpenDeck ?? (_) async {},
         ),
       ),
     );
@@ -174,5 +176,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Não foi possível criar o deck.'), findsOneWidget);
+  });
+
+  testWidgets('tocar num deck abre o deck e recarrega ao voltar', (
+    tester,
+  ) async {
+    final repository = FakeDeckRepository([deck(1, 'Verbos', 0)]);
+    final opened = <int>[];
+    await pumpScreen(
+      tester,
+      repository,
+      onOpenDeck: (deck) async {
+        opened.add(deck.id);
+        await repository.renameDeck(deck.id, 'Verbos (editado)');
+      },
+    );
+
+    await tester.tap(find.text('Verbos'));
+    await tester.pumpAndSettle();
+
+    expect(opened, [1]);
+    expect(find.text('Verbos (editado)'), findsOneWidget);
   });
 }
