@@ -5,6 +5,8 @@ import 'ui/card_editor/view_models/card_editor_view_model.dart';
 import 'ui/card_editor/widgets/card_editor_screen.dart';
 import 'ui/deck_detail/view_models/deck_detail_view_model.dart';
 import 'ui/deck_detail/widgets/deck_detail_screen.dart';
+import 'ui/review/view_models/review_view_model.dart';
+import 'ui/review/widgets/review_screen.dart';
 
 /// Builds every route of the app. Each ViewModel is created here, once per
 /// route, and handed to its screen, which disposes it.
@@ -25,7 +27,19 @@ class AppRoutes {
         onOpenEditor: (cardId) =>
             Navigator.of(context)
                 .push(cardEditor(deckId: deckId, cardId: cardId)),
+        onStartReview: () => Navigator.of(context)
+            .push(review(deckId: deckId, deckName: viewModel.deck?.name ?? '')),
       ),
+    );
+  }
+
+  Route<void> review({required int deckId, required String deckName}) {
+    final viewModel = ReviewViewModel(
+      deckId: deckId,
+      cardRepository: _dependencies.cards,
+    );
+    return MaterialPageRoute(
+      builder: (_) => ReviewScreen(deckName: deckName, viewModel: viewModel),
     );
   }
 

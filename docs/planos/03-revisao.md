@@ -588,6 +588,8 @@ git commit -m "feat: cria o ReviewViewModel com a regra do contador"
 
 ### Tarefa 4: `FlipCard`, o card que vira ao arrastar
 
+> **Ajustes feitos na execução (2026-10-16):** no Flutter 3.47.5, um arrasto já aceito que o sistema cancela chega em `onHorizontalDragEnd`, e não em `onHorizontalDragCancel`. Por isso o `FlipCard` ganhou um `Listener(onPointerCancel: ...)` que marca o arrasto como cancelado; o `_onDragEnd` então faz o card voltar, e a marca é zerada no `_onDragStart`. Não há `onHorizontalDragCancel`: um toque que vira um arrasto rejeitado (por exemplo, quando o conteúdo do card rola) não pode desfazer uma virada em andamento. Cada um desses comportamentos tem teste, assim como o peteleco no sentido contrário e o verso não espelhado.
+
 **Arquivos:**
 - Criar: `lib/ui/review/widgets/flip_card.dart`
 - Testar: `test/ui/review/flip_card_test.dart`
@@ -1671,6 +1673,7 @@ Para testar, crie um deck com 3 cards de texto.
 - [ ] **Revisar de novo** recomeça, com os menos revisados primeiro
 - [ ] **Voltar ao deck** mostra os contadores atualizados na lista
 - [ ] O **✕** e o voltar do Android saem da revisão sem perguntar
+- [ ] Começar a girar o card e, sem soltar, puxar a cortina de notificações (ou começar o gesto de voltar na borda e desistir): o card volta ao lado em que estava, e depois ainda vira normalmente
 - [ ] A animação fica fluida, sem travadas visíveis
 
 - [ ] **Passo 3: juntar ao `main`**

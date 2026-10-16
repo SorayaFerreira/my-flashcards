@@ -16,5 +16,6 @@ Esta pasta guarda os requisitos, o design e os planos de implementação do app.
 - **Código:**
   - **Etapa 0** concluída em 2026-10-15: projeto criado e app vazio rodando no celular, com o ícone do logo (margem padrão de 16% em volta do "F").
   - **Etapa 1** concluída em 2026-10-15: banco de dados, tela de decks e a abertura com o logo.
-  - **Etapa 2** implementada em 2026-10-15 (cards de texto: tela do deck e editor). Falta o teste no celular.
-  - **Próxima:** etapa 3, revisão.
+  - **Etapa 2** concluída em 2026-10-15: cards de texto, com a tela do deck e o editor.
+  - **Etapa 3** implementada em 2026-10-16 (revisão com o card que vira ao arrastar e o contador). Falta o teste no celular.
+  - **Próxima:** etapa 4, imagens.

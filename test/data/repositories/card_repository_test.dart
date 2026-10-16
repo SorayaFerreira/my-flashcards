@@ -145,4 +145,22 @@ void main() {
 
     expect(okValue(await repository.getCards(deckId)), isEmpty);
   });
+
+  test('incrementReviewCount soma um e devolve o novo valor', () async {
+    final card = okValue(
+      await repository.createCard(
+        deckId: deckId,
+        front: const CardSide(text: 'a'),
+        back: const CardSide(text: 'b'),
+      ),
+    );
+
+    expect(okValue(await repository.incrementReviewCount(card.id)), 1);
+    expect(okValue(await repository.incrementReviewCount(card.id)), 2);
+    expect(okValue(await repository.getCard(card.id)).reviewCount, 2);
+  });
+
+  test('incrementReviewCount de um card inexistente devolve erro', () async {
+    expect(await repository.incrementReviewCount(999), isA<Error<int>>());
+  });
 }

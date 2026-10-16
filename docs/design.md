@@ -381,9 +381,11 @@ Tocar na notificação do lembrete abre o app na lista de decks.
   - se o giro passou da metade, ou o arrasto foi rápido, a animação completa a virada;
   - senão, o card volta ao lado em que estava.
 - A animação dura cerca de 250 ms. No meio do giro, o conteúdo troca para o outro lado, já desespelhado.
+- Um arrasto **interrompido pelo sistema** (por exemplo, quando o gesto de voltar na borda da tela ou a cortina de notificações toma o toque) não completa a virada: o card volta ao lado em que estava (decisão de 2026-10-16).
+- Um peteleco rápido só vira o card se for no mesmo sentido do giro.
 
 **O contador:**
-- Na primeira vez que o verso aparece, a View chama `markBackSeen()`.
+- Na primeira vez que o verso aparece, a View chama `markBackSeen()`. "Aparecer" quer dizer **completar a virada** para o verso: espiar o verso no meio de um arrasto e soltar sem virar não conta (decisão de 2026-10-16).
 - O número sobe na hora, se for a primeira vez daquele card na sessão (RF-16).
 
 **Dica de gesto:**

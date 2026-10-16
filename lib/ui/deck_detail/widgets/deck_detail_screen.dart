@@ -15,12 +15,16 @@ class DeckDetailScreen extends StatefulWidget {
     super.key,
     required this.viewModel,
     required this.onOpenEditor,
+    required this.onStartReview,
   });
 
   final DeckDetailViewModel viewModel;
 
   /// Opens the card editor for a card, or for a new card when given null.
   final Future<void> Function(int? cardId) onOpenEditor;
+
+  /// Opens the review. The list reloads afterwards to show the new counts.
+  final Future<void> Function() onStartReview;
 
   @override
   State<DeckDetailScreen> createState() => _DeckDetailScreenState();
@@ -43,6 +47,11 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
 
   Future<void> _openEditor(int? cardId) async {
     await widget.onOpenEditor(cardId);
+    if (mounted) await _viewModel.load();
+  }
+
+  Future<void> _startReview() async {
+    await widget.onStartReview();
     if (mounted) await _viewModel.load();
   }
 
@@ -82,23 +91,40 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
     if (_viewModel.isLoading && _viewModel.deck == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_viewModel.cards.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'Nenhum card ainda. Toque em + para criar.',
-            textAlign: TextAlign.center,
+    final cards = _viewModel.cards;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: cards.isEmpty ? null : _startReview,
+              icon: const Icon(Icons.style_outlined),
+              label: Text('Revisar (${cards.length})'),
+            ),
           ),
         ),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 88),
-      itemCount: _viewModel.cards.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) =>
-          _CardTile(card: _viewModel.cards[index], onTap: _openEditor),
+        Expanded(
+          child: cards.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text(
+                      'Nenhum card ainda. Toque em + para criar.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.only(bottom: 88),
+                  itemCount: cards.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) =>
+                      _CardTile(card: cards[index], onTap: _openEditor),
+                ),
+        ),
+      ],
     );
   }
 }
