@@ -1475,6 +1475,8 @@ git commit -m "feat: editor guarda imagens como rascunho até salvar"
 
 ### Tarefa 5: imagem nas telas (editor e revisão)
 
+> **Ajuste herdado da etapa 3 (2026-10-16):** o `ReviewCardFace` (`lib/ui/review/widgets/review_card_face.dart`) usa um `Stack` com 28 px fixos de espaço para a etiqueta e o contador. Com fonte grande no sistema, ou com imagem no card, eles podem encostar no conteúdo. Nesta tarefa, troque o `Stack` por uma `Column`: a etiqueta em cima, o conteúdo num `Expanded` e o contador numa linha alinhada à direita, mantendo a `Key('review-count')`. Os testes da revisão continuam valendo.
+
 **Arquivos:**
 - Criar: `lib/ui/core/widgets/media_image.dart`
 - Substituir: `lib/ui/core/widgets/card_side_view.dart` e `lib/ui/card_editor/widgets/side_editor.dart`
