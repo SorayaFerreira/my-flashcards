@@ -1,19 +1,27 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/data/repositories/deck_repository.dart';
 import 'package:my_flashcards/data/services/database_service.dart';
+import 'package:my_flashcards/data/services/media_file_service.dart';
 import 'package:my_flashcards/utils/result.dart';
 
 import '../../helpers/result.dart';
+import '../../helpers/temp_media.dart';
 import '../../helpers/test_database.dart';
 
 void main() {
   late DatabaseService database;
+  late MediaFileService mediaFiles;
   late DeckRepository repository;
   final now = DateTime(2026, 10, 12, 9, 30);
 
   setUp(() async {
     database = await openTestDatabase();
-    repository = DeckRepository(database: database, now: () => now);
+    mediaFiles = await createTempMediaFiles();
+    repository = DeckRepository(
+      database: database,
+      mediaFiles: mediaFiles,
+      now: () => now,
+    );
   });
   tearDown(() => database.close());
 
@@ -35,6 +43,7 @@ void main() {
   test('o deck criado é igual ao lido, mesmo com microssegundos', () async {
     repository = DeckRepository(
       database: database,
+      mediaFiles: mediaFiles,
       now: () => DateTime(2026, 10, 12, 9, 30, 0, 0, 123),
     );
 
@@ -126,5 +135,31 @@ void main() {
 
     expect(okValue(await repository.getDecks()), isEmpty);
     expect(await database.db.query('cards'), isEmpty);
+  });
+
+  test('excluir o deck apaga os arquivos dos cards dele, e só deles', () async {
+    final deck = okValue(await repository.createDeck('Com imagens'));
+    final other = okValue(await repository.createDeck('Outro'));
+    await writeMedia(mediaFiles, 'img_deck.jpg');
+    await writeMedia(mediaFiles, 'aud_deck.m4a');
+    await writeMedia(mediaFiles, 'img_outro.jpg');
+    await database.db.insert('cards', {
+      'deck_id': deck.id,
+      'front_image': 'img_deck.jpg',
+      'back_audio': 'aud_deck.m4a',
+      'created_at': 0,
+    });
+    await database.db.insert('cards', {
+      'deck_id': other.id,
+      'front_image': 'img_outro.jpg',
+      'back_text': 'x',
+      'created_at': 0,
+    });
+
+    okValue(await repository.deleteDeck(deck.id));
+
+    expect(await mediaFiles.mediaFile('img_deck.jpg').exists(), isFalse);
+    expect(await mediaFiles.mediaFile('aud_deck.m4a').exists(), isFalse);
+    expect(await mediaFiles.mediaFile('img_outro.jpg').exists(), isTrue);
   });
 }

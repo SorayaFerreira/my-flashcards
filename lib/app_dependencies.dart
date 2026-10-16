@@ -29,8 +29,8 @@ class AppDependencies {
     await database.open();
     final mediaFiles = await MediaFileService.create();
     return AppDependencies(
-      decks: DeckRepository(database: database),
-      cards: CardRepository(database: database),
+      decks: DeckRepository(database: database, mediaFiles: mediaFiles),
+      cards: CardRepository(database: database, mediaFiles: mediaFiles),
       media: MediaRepository(
         files: mediaFiles,
         imagePicker: ImagePickerService(),

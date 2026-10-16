@@ -1,23 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/data/repositories/card_repository.dart';
 import 'package:my_flashcards/data/services/database_service.dart';
+import 'package:my_flashcards/data/services/media_file_service.dart';
 import 'package:my_flashcards/domain/models/card_side.dart';
 import 'package:my_flashcards/utils/result.dart';
 
 import '../../helpers/result.dart';
+import '../../helpers/temp_media.dart';
 import '../../helpers/test_database.dart';
 
 void main() {
   late DatabaseService database;
+  late MediaFileService mediaFiles;
   late CardRepository repository;
   late int deckId;
   late int otherDeckId;
 
   setUp(() async {
     database = await openTestDatabase();
+    mediaFiles = await createTempMediaFiles();
     var clock = DateTime(2026, 10, 12, 9);
     repository = CardRepository(
       database: database,
+      mediaFiles: mediaFiles,
       now: () => clock = clock.add(const Duration(minutes: 1)),
     );
     deckId = await database.db.insert('decks', {'name': 'A', 'created_at': 0});
@@ -162,5 +167,45 @@ void main() {
 
   test('incrementReviewCount de um card inexistente devolve erro', () async {
     expect(await repository.incrementReviewCount(999), isA<Error<int>>());
+  });
+
+  test('updateCard apaga a imagem trocada e mantém as outras', () async {
+    await writeMedia(mediaFiles, 'img_velha.jpg');
+    await writeMedia(mediaFiles, 'img_verso.jpg');
+    await writeMedia(mediaFiles, 'img_nova.jpg');
+    final card = okValue(
+      await repository.createCard(
+        deckId: deckId,
+        front: const CardSide(text: 'a', image: 'img_velha.jpg'),
+        back: const CardSide(image: 'img_verso.jpg'),
+      ),
+    );
+
+    okValue(
+      await repository.updateCard(
+        id: card.id,
+        front: const CardSide(text: 'a', image: 'img_nova.jpg'),
+        back: const CardSide(image: 'img_verso.jpg'),
+      ),
+    );
+
+    expect(await mediaFiles.mediaFile('img_velha.jpg').exists(), isFalse);
+    expect(await mediaFiles.mediaFile('img_verso.jpg').exists(), isTrue);
+    expect(await mediaFiles.mediaFile('img_nova.jpg').exists(), isTrue);
+  });
+
+  test('deleteCard apaga os arquivos do card', () async {
+    await writeMedia(mediaFiles, 'img_1.jpg');
+    final card = okValue(
+      await repository.createCard(
+        deckId: deckId,
+        front: const CardSide(image: 'img_1.jpg'),
+        back: const CardSide(text: 'b'),
+      ),
+    );
+
+    okValue(await repository.deleteCard(card.id));
+
+    expect(await mediaFiles.mediaFile('img_1.jpg').exists(), isFalse);
   });
 }
