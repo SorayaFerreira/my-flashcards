@@ -9,6 +9,7 @@ import 'package:my_flashcards/ui/card_editor/widgets/card_editor_screen.dart';
 import 'package:my_flashcards/utils/result.dart';
 
 import '../../fakes/fake_card_repository.dart';
+import '../../fakes/fake_media_repository.dart';
 
 class _GatedCardRepository extends FakeCardRepository {
   _GatedCardRepository(super.cards);
@@ -28,8 +29,10 @@ class _GatedCardRepository extends FakeCardRepository {
 
 void main() {
   late FakeCardRepository cards;
+  late FakeMediaRepository media;
 
   setUp(() {
+    media = FakeMediaRepository();
     cards = FakeCardRepository([
       Flashcard(
         id: 7,
@@ -52,6 +55,7 @@ void main() {
       deckId: 1,
       cardId: cardId,
       cardRepository: repository ?? cards,
+      mediaRepository: media,
     );
     await tester.pumpWidget(
       MaterialApp(

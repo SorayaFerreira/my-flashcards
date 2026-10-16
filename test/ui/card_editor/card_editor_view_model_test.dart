@@ -1,12 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/domain/models/card_side.dart';
 import 'package:my_flashcards/domain/models/flashcard.dart';
+import 'package:my_flashcards/domain/models/image_origin.dart';
 import 'package:my_flashcards/ui/card_editor/view_models/card_editor_view_model.dart';
 
 import '../../fakes/fake_card_repository.dart';
+import '../../fakes/fake_media_repository.dart';
 
 void main() {
   late FakeCardRepository cards;
+  late FakeMediaRepository media;
 
   final existing = Flashcard(
     id: 7,
@@ -17,13 +20,23 @@ void main() {
     reviewCount: 4,
   );
 
-  setUp(() => cards = FakeCardRepository([existing]));
+  setUp(() {
+    cards = FakeCardRepository([existing]);
+    media = FakeMediaRepository();
+  });
 
-  CardEditorViewModel newCard() =>
-      CardEditorViewModel(deckId: 1, cardRepository: cards);
+  CardEditorViewModel newCard() => CardEditorViewModel(
+    deckId: 1,
+    cardRepository: cards,
+    mediaRepository: media,
+  );
 
-  CardEditorViewModel editCard() =>
-      CardEditorViewModel(deckId: 1, cardId: 7, cardRepository: cards);
+  CardEditorViewModel editCard({int cardId = 7}) => CardEditorViewModel(
+    deckId: 1,
+    cardId: cardId,
+    cardRepository: cards,
+    mediaRepository: media,
+  );
 
   group('card novo', () {
     test('começa vazio, sem alterações e sem poder salvar', () async {
@@ -122,16 +135,158 @@ void main() {
     });
 
     test('card inexistente mostra erro de carregamento', () async {
-      final viewModel = CardEditorViewModel(
-        deckId: 1,
-        cardId: 99,
-        cardRepository: cards,
-      );
+      final viewModel = editCard(cardId: 99);
 
       await viewModel.load();
 
       expect(viewModel.loadError, CardEditorViewModel.loadErrorMessage);
       expect(viewModel.canSave, isFalse);
+    });
+  });
+
+  group('imagens', () {
+    test(
+      'pickImage põe a imagem nova no lado, com o caminho de rascunho',
+      () async {
+        media.nextPick = 'img_1.jpg';
+        final viewModel = newCard();
+
+        expect(
+          await viewModel.pickImage(Side.front, ImageOrigin.camera),
+          isTrue,
+        );
+
+        expect(media.picks, [ImageOrigin.camera]);
+        expect(viewModel.draft(Side.front).image?.name, 'img_1.jpg');
+        expect(viewModel.imagePath(Side.front), '/drafts/img_1.jpg');
+        expect(viewModel.hasChanges, isTrue);
+      },
+    );
+
+    test('um lado só com imagem já conta como preenchido', () async {
+      media.nextPick = 'img_1.jpg';
+      final viewModel = newCard()..setText(Side.back, 'desistir');
+
+      await viewModel.pickImage(Side.front, ImageOrigin.gallery);
+
+      expect(viewModel.canSave, isTrue);
+    });
+
+    test('cancelar a câmera não muda nada e não mostra erro', () async {
+      final viewModel = newCard();
+
+      expect(await viewModel.pickImage(Side.front, ImageOrigin.camera), isTrue);
+
+      expect(viewModel.draft(Side.front).image, isNull);
+      expect(viewModel.actionError, isNull);
+      expect(viewModel.hasChanges, isFalse);
+    });
+
+    test('falha do seletor mostra a mensagem de imagem', () async {
+      media.nextPick = Exception('câmera ocupada');
+      final viewModel = newCard();
+
+      expect(
+        await viewModel.pickImage(Side.front, ImageOrigin.camera),
+        isFalse,
+      );
+      expect(viewModel.actionError, CardEditorViewModel.imageErrorMessage);
+    });
+
+    test('trocar uma imagem nova apaga o rascunho anterior', () async {
+      final viewModel = newCard();
+      media.nextPick = 'img_1.jpg';
+      await viewModel.pickImage(Side.front, ImageOrigin.camera);
+      media.nextPick = 'img_2.jpg';
+
+      await viewModel.pickImage(Side.front, ImageOrigin.camera);
+
+      expect(media.discarded, ['img_1.jpg']);
+      expect(viewModel.draft(Side.front).image?.name, 'img_2.jpg');
+    });
+
+    test(
+      'remover uma imagem já salva não apaga o arquivo antes de salvar',
+      () async {
+        cards = FakeCardRepository([
+          Flashcard(
+            id: 7,
+            deckId: 1,
+            front: const CardSide(text: 'a', image: 'img_salva.jpg'),
+            back: const CardSide(text: 'b'),
+            createdAt: DateTime(2026),
+          ),
+        ]);
+        final viewModel = editCard();
+        await viewModel.load();
+        expect(viewModel.imagePath(Side.front), '/media/img_salva.jpg');
+
+        await viewModel.removeImage(Side.front);
+
+        expect(media.discarded, isEmpty);
+        expect(viewModel.hasChanges, isTrue);
+        await viewModel.save();
+        expect(cards.cards.single.front.image, isNull);
+      },
+    );
+
+    test('save move os rascunhos para media antes de gravar', () async {
+      media.nextPick = 'img_1.jpg';
+      final viewModel = newCard()..setText(Side.back, 'b');
+      await viewModel.pickImage(Side.front, ImageOrigin.camera);
+
+      expect(await viewModel.save(), isTrue);
+
+      expect(media.committed, ['img_1.jpg']);
+      expect(cards.cards.last.front.image, 'img_1.jpg');
+      expect(viewModel.imagePath(Side.front), '/media/img_1.jpg');
+    });
+
+    test('se o banco falhar, os arquivos voltam a ser rascunho', () async {
+      media.nextPick = 'img_1.jpg';
+      final viewModel = newCard()..setText(Side.back, 'b');
+      await viewModel.pickImage(Side.front, ImageOrigin.camera);
+      cards.failWith = Exception('disco');
+
+      expect(await viewModel.save(), isFalse);
+
+      expect(media.reverted, ['img_1.jpg']);
+      expect(viewModel.actionError, CardEditorViewModel.saveErrorMessage);
+      expect(viewModel.imagePath(Side.front), '/drafts/img_1.jpg');
+    });
+
+    test('se mover os arquivos falhar, nada é gravado', () async {
+      media
+        ..nextPick = 'img_1.jpg'
+        ..commitError = Exception('disco cheio');
+      final viewModel = newCard()..setText(Side.back, 'b');
+      await viewModel.pickImage(Side.front, ImageOrigin.camera);
+      final before = cards.cards.length;
+
+      expect(await viewModel.save(), isFalse);
+
+      expect(cards.cards.length, before);
+      expect(viewModel.actionError, CardEditorViewModel.saveErrorMessage);
+    });
+
+    test('discard apaga só os arquivos novos', () async {
+      media.nextPick = 'img_nova.jpg';
+      cards = FakeCardRepository([
+        Flashcard(
+          id: 7,
+          deckId: 1,
+          front: const CardSide(image: 'img_salva.jpg'),
+          back: const CardSide(text: 'b'),
+          createdAt: DateTime(2026),
+        ),
+      ]);
+      final viewModel = editCard();
+      await viewModel.load();
+      await viewModel.pickImage(Side.back, ImageOrigin.gallery);
+
+      await viewModel.discard();
+
+      expect(media.discarded, ['img_nova.jpg']);
     });
   });
 }

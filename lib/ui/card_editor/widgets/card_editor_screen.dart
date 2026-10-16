@@ -97,7 +97,9 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
         ],
       ),
     );
-    if (discard == true && mounted) Navigator.of(context).pop(false);
+    if (discard != true) return;
+    await _viewModel.discard();
+    if (mounted) Navigator.of(context).pop(false);
   }
 
   @override

@@ -48,6 +48,7 @@ class AppRoutes {
       deckId: deckId,
       cardId: cardId,
       cardRepository: _dependencies.cards,
+      mediaRepository: _dependencies.media,
     );
     return MaterialPageRoute(
       builder: (_) => CardEditorScreen(viewModel: viewModel),
