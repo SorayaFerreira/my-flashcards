@@ -50,6 +50,7 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
       _isFinished || _queue.isEmpty ? null : _queue[_index];
 
   Future<void> start() async {
+    if (_isLoading) return;
     _isLoading = true;
     _loadError = null;
     notifyListeners();

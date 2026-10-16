@@ -56,20 +56,22 @@ class CardRepository {
   });
 
   /// Adds one review to the card and returns its new count.
-  Future<Result<int>> incrementReviewCount(int id) => guard(() async {
-    final updated = await _database.db.rawUpdate(
-      'UPDATE cards SET review_count = review_count + 1 WHERE id = ?',
-      [id],
-    );
-    if (updated == 0) throw NotFoundException('O card $id não existe.');
-    final rows = await _database.db.query(
-      'cards',
-      columns: ['review_count'],
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return rows.single['review_count']! as int;
-  });
+  Future<Result<int>> incrementReviewCount(int id) => guard(
+    () => _database.db.transaction((txn) async {
+      final updated = await txn.rawUpdate(
+        'UPDATE cards SET review_count = review_count + 1 WHERE id = ?',
+        [id],
+      );
+      if (updated == 0) throw NotFoundException('O card $id não existe.');
+      final rows = await txn.query(
+        'cards',
+        columns: ['review_count'],
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return rows.single['review_count']! as int;
+    }),
+  );
 
   Future<Map<String, Object?>> _findRow(int id) async {
     final rows = await _database.db.query(

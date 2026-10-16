@@ -154,6 +154,12 @@ void main() {
     expect(vm.current!.id, isNot(first));
   });
 
+  test('start chamado duas vezes sem esperar carrega uma vez só', () async {
+    await Future.wait([viewModel.start(), viewModel.start()]);
+
+    expect(viewModel.session, 1);
+  });
+
   test('deck vazio termina na hora com zero cards', () async {
     final empty = ReviewViewModel(deckId: 42, cardRepository: cards);
 
