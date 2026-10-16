@@ -25,6 +25,7 @@ void main() {
     WidgetTester tester,
     FakeCardRepository cards, {
     Future<void> Function(int? cardId)? onOpenEditor,
+    Future<void> Function()? onStartReview,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -35,6 +36,7 @@ void main() {
             cardRepository: cards,
           ),
           onOpenEditor: onOpenEditor ?? (_) async {},
+          onStartReview: onStartReview ?? () async {},
         ),
       ),
     );
@@ -151,5 +153,35 @@ void main() {
       find.text('Nenhum card ainda. Toque em + para criar.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('Revisar (N) fica desativado sem cards', (tester) async {
+    await pumpScreen(tester, FakeCardRepository());
+
+    final button = tester.widget<ButtonStyleButton>(
+      find.ancestor(
+        of: find.text('Revisar (0)'),
+        matching: find.bySubtype<ButtonStyleButton>(),
+      ),
+    );
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('Revisar (N) abre a revisão e recarrega os contadores', (
+    tester,
+  ) async {
+    final cards = FakeCardRepository([
+      card(1, const CardSide(text: 'to give up')),
+    ]);
+    await pumpScreen(
+      tester,
+      cards,
+      onStartReview: () async => cards.incrementReviewCount(1),
+    );
+
+    await tester.tap(find.text('Revisar (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1'), findsOneWidget);
   });
 }
