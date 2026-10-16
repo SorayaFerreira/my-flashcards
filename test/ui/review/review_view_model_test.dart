@@ -135,6 +135,25 @@ void main() {
     expect(viewModel.current?.id, 2);
   });
 
+  test('restart recalcula a ordem: o card revisado vai para depois', () async {
+    final pair = FakeCardRepository([card(1, 0), card(2, 0)]);
+    final vm = ReviewViewModel(
+      deckId: 1,
+      cardRepository: pair,
+      random: Random(1),
+    );
+    await vm.start();
+    final first = vm.current!.id;
+    await vm.markBackSeen();
+    while (!vm.isFinished) {
+      vm.next();
+    }
+
+    await vm.restart();
+
+    expect(vm.current!.id, isNot(first));
+  });
+
   test('deck vazio termina na hora com zero cards', () async {
     final empty = ReviewViewModel(deckId: 42, cardRepository: cards);
 
