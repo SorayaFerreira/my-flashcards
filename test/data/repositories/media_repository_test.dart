@@ -83,7 +83,11 @@ void main() {
     await repository.discardDrafts(['a.jpg']);
     expect(await files.draftFile('a.jpg').exists(), isFalse);
 
+    final leftover = File(p.join(files.draftDir.parent.path, 'scaled_1.jpg'))
+      ..writeAsStringSync('x');
+
     await repository.clearDrafts();
     expect(files.draftDir.listSync(), isEmpty);
+    expect(leftover.existsSync(), isFalse);
   });
 }

@@ -36,6 +36,9 @@ class MediaRepository {
   }
 
   Future<void> clearDrafts() async {
-    await guard(_files.clearDrafts);
+    await guard(() async {
+      await _files.clearDrafts();
+      await _files.clearPickerLeftovers();
+    });
   }
 }

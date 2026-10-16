@@ -80,4 +80,41 @@ void main() {
     expect(await files.draftDir.exists(), isTrue);
     expect(files.draftDir.listSync(), isEmpty);
   });
+
+  test(
+    'clearPickerLeftovers apaga só o que o image_picker deixa no cache',
+    () async {
+      const uuid = '0c9f1d2e-3a4b-4c5d-8e6f-7a8b9c0d1e2f';
+      final root = files.draftDir.parent.path;
+      Future<void> file(String path) async {
+        await File(p.join(root, path)).create(recursive: true);
+      }
+
+      await file('$uuid/foto.jpg');
+      await file('scaled_x.jpg');
+      await file('${uuid}123.jpg');
+      await file('${uuid}0.jpg');
+      await file('share_plus/a.txt');
+      await file('notes.txt');
+      await file('outra_pasta/a.jpg');
+      await file('${uuid}abc.jpg');
+      await writeMedia(files, 'rascunho.jpg', draft: true);
+
+      await files.clearPickerLeftovers();
+
+      bool exists(String path) =>
+          FileSystemEntity.typeSync(p.join(root, path)) !=
+          FileSystemEntityType.notFound;
+      expect(exists(uuid), isFalse);
+      expect(exists('scaled_x.jpg'), isFalse);
+      expect(exists('${uuid}123.jpg'), isFalse);
+      expect(exists('${uuid}0.jpg'), isFalse);
+      expect(exists('share_plus/a.txt'), isTrue);
+      expect(exists('notes.txt'), isTrue);
+      expect(exists('outra_pasta/a.jpg'), isTrue);
+      expect(exists('${uuid}abc.jpg'), isTrue);
+      expect(exists('drafts/rascunho.jpg'), isTrue);
+      expect(files.mediaDir.existsSync(), isTrue);
+    },
+  );
 }

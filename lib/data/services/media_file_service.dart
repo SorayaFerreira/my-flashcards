@@ -85,6 +85,36 @@ class MediaFileService {
     if (await draftDir.exists()) await draftDir.delete(recursive: true);
     await draftDir.create(recursive: true);
   }
+
+  static final _uuidFolder = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  );
+  static final _cameraFile = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\d*\.jpg$',
+  );
+
+  /// Deletes what image_picker leaves in the app's cache folder: folders named
+  /// like a UUID, `scaled_*` files and `<uuid><digits>.jpg` camera files.
+  Future<void> clearPickerLeftovers() async {
+    final cache = draftDir.parent;
+    if (!await cache.exists()) return;
+    await for (final entry in cache.list(followLinks: false)) {
+      final name = p.basename(entry.path);
+      try {
+        if (entry is Directory) {
+          if (_uuidFolder.hasMatch(name) && entry.path != draftDir.path) {
+            await entry.delete(recursive: true);
+          }
+        } else if (entry is File) {
+          if (name.startsWith('scaled_') || _cameraFile.hasMatch(name)) {
+            await entry.delete();
+          }
+        }
+      } on FileSystemException {
+        // A stray file is harmless; go on with the others.
+      }
+    }
+  }
 }
 
 Future<void> _move(File file, String destination) async {
