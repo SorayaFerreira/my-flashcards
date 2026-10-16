@@ -55,6 +55,22 @@ class CardRepository {
     await _database.db.delete('cards', where: 'id = ?', whereArgs: [id]);
   });
 
+  /// Adds one review to the card and returns its new count.
+  Future<Result<int>> incrementReviewCount(int id) => guard(() async {
+    final updated = await _database.db.rawUpdate(
+      'UPDATE cards SET review_count = review_count + 1 WHERE id = ?',
+      [id],
+    );
+    if (updated == 0) throw NotFoundException('O card $id não existe.');
+    final rows = await _database.db.query(
+      'cards',
+      columns: ['review_count'],
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return rows.single['review_count']! as int;
+  });
+
   Future<Map<String, Object?>> _findRow(int id) async {
     final rows = await _database.db.query(
       'cards',

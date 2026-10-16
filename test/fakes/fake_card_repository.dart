@@ -82,4 +82,14 @@ class FakeCardRepository implements CardRepository {
   @override
   Future<Result<void>> deleteCard(int id) =>
       _answer(() => _cards.removeWhere((c) => c.id == id));
+
+  @override
+  Future<Result<int>> incrementReviewCount(int id) => _answer(() {
+    final index = _indexOf(id);
+    final updated = _cards[index].copyWith(
+      reviewCount: _cards[index].reviewCount + 1,
+    );
+    _cards[index] = updated;
+    return updated.reviewCount;
+  });
 }
