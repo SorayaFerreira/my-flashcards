@@ -129,4 +129,22 @@ void main() {
     expect(find.text('frente'), findsOneWidget);
     expect(flips, isEmpty);
   });
+
+  testWidgets('tocar no card durante a animação não desfaz a virada', (
+    tester,
+  ) async {
+    await pumpCard(tester);
+
+    await tester.timedDrag(
+      find.byType(FlipCard),
+      const Offset(220, 0),
+      const Duration(seconds: 1),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byType(FlipCard));
+    await tester.pumpAndSettle();
+
+    expect(find.text('verso'), findsOneWidget);
+    expect(flips, [true]);
+  });
 }

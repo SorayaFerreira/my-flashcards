@@ -34,6 +34,10 @@ class _FlipCardState extends State<FlipCard>
   );
   bool _showingBack = false;
   double _width = 1;
+  // Set when the system cancels the pointer (e.g. the Android back gesture).
+  // An accepted drag cancelled this way reaches _onDragEnd, which checks this
+  // flag and springs back instead of flipping.
+  bool _pointerCancelled = false;
 
   double get _restingAngle => _showingBack ? math.pi : 0;
 
@@ -42,11 +46,6 @@ class _FlipCardState extends State<FlipCard>
     _angle.dispose();
     super.dispose();
   }
-
-  // An accepted drag that the system cancels (e.g. the Android back gesture)
-  // reaches onHorizontalDragEnd, not onHorizontalDragCancel. Pointer cancels
-  // are tracked separately so such a drag springs back instead of flipping.
-  bool _pointerCancelled = false;
 
   void _onDragStart(DragStartDetails details) {
     _pointerCancelled = false;
@@ -87,12 +86,6 @@ class _FlipCardState extends State<FlipCard>
     }
   }
 
-  void _onDragCancel() => _angle.animateTo(
-    _restingAngle,
-    duration: FlipCard.flipDuration,
-    curve: Curves.easeOut,
-  );
-
   void _completeFlip() {
     setState(() => _showingBack = !_showingBack);
     _angle.value = _restingAngle;
@@ -112,7 +105,6 @@ class _FlipCardState extends State<FlipCard>
             onHorizontalDragStart: _onDragStart,
             onHorizontalDragUpdate: _onDragUpdate,
             onHorizontalDragEnd: _onDragEnd,
-            onHorizontalDragCancel: _onDragCancel,
             child: AnimatedBuilder(
               animation: _angle,
               builder: (context, _) {
