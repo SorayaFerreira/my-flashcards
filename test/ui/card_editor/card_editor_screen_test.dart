@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/domain/models/card_side.dart';
 import 'package:my_flashcards/domain/models/flashcard.dart';
+import 'package:my_flashcards/domain/models/image_origin.dart';
 import 'package:my_flashcards/ui/card_editor/view_models/card_editor_view_model.dart';
 import 'package:my_flashcards/ui/card_editor/widgets/card_editor_screen.dart';
 import 'package:my_flashcards/utils/result.dart';
@@ -248,5 +249,64 @@ void main() {
     await openEditor(tester, cardId: 7);
     expect(tester.widget<TextField>(textField(0)).autofocus, isFalse);
     expect(tester.widget<TextField>(textField(1)).autofocus, isFalse);
+  });
+
+  testWidgets('Câmera põe a imagem no lado e troca os botões pelo ✕', (
+    tester,
+  ) async {
+    media.nextPick = 'img_1.jpg';
+    await openEditor(tester);
+
+    await tester.tap(find.text('Câmera').first);
+    await tester.pumpAndSettle();
+
+    expect(media.picks, [ImageOrigin.camera]);
+    expect(find.byTooltip('Remover imagem'), findsOneWidget);
+    expect(find.text('Câmera'), findsOneWidget);
+  });
+
+  testWidgets('frente só com imagem e verso com texto já podem ser salvos', (
+    tester,
+  ) async {
+    media.nextPick = 'img_1.jpg';
+    final results = await openEditor(tester);
+
+    await tester.tap(find.text('Galeria').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(textField(1), 'desistir');
+    await tester.pump();
+    await tester.tap(find.text('SALVAR'));
+    await tester.pumpAndSettle();
+
+    expect(results, [true]);
+    expect(cards.cards.last.front.image, 'img_1.jpg');
+  });
+
+  testWidgets('descartar apaga a imagem nova', (tester) async {
+    media.nextPick = 'img_1.jpg';
+    final results = await openEditor(tester);
+    await tester.tap(find.text('Câmera').first);
+    await tester.pumpAndSettle();
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Descartar'));
+    await tester.pumpAndSettle();
+
+    expect(results, [false]);
+    expect(media.discarded, ['img_1.jpg']);
+  });
+
+  testWidgets('✕ remove a imagem e os botões voltam', (tester) async {
+    media.nextPick = 'img_1.jpg';
+    await openEditor(tester);
+    await tester.tap(find.text('Câmera').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Remover imagem'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Câmera'), findsNWidgets(2));
+    expect(media.discarded, ['img_1.jpg']);
   });
 }

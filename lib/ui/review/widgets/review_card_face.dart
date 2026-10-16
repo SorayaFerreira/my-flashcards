@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// The frame of a card in the review: label on top, review count in the
-/// bottom-right corner like a page number.
+/// bottom-right like a page number.
 class ReviewCardFace extends StatelessWidget {
   const ReviewCardFace({
     super.key,
@@ -27,23 +27,20 @@ class ReviewCardFace extends StatelessWidget {
       child: SizedBox.expand(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Align(
-                alignment: Alignment.topLeft,
-                child: Text(label, style: muted),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 28),
-                child: child,
-              ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Text(
-                  '$reviewCount',
-                  key: const Key('review-count'),
-                  style: muted,
-                ),
+              Text(label, style: muted),
+              Expanded(child: child),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    '$reviewCount',
+                    key: const Key('review-count'),
+                    style: muted,
+                  ),
+                ],
               ),
             ],
           ),

@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/card_repository.dart';
+import '../../../data/repositories/media_repository.dart';
+import '../../../domain/models/card_side.dart';
 import '../../../domain/models/flashcard.dart';
 import '../../../domain/review_order.dart';
 import '../../../utils/result.dart';
@@ -12,6 +14,7 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
   ReviewViewModel({
     required this.deckId,
     required this._cardRepository,
+    required this._mediaRepository,
     Random? random,
   }) : _random = random ?? Random();
 
@@ -20,6 +23,7 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
 
   final int deckId;
   final CardRepository _cardRepository;
+  final MediaRepository _mediaRepository;
   final Random _random;
 
   List<Flashcard> _queue = const [];
@@ -48,6 +52,11 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
 
   Flashcard? get current =>
       _isFinished || _queue.isEmpty ? null : _queue[_index];
+
+  String? imagePathOf(CardSide side) {
+    final image = side.image;
+    return image == null ? null : _mediaRepository.mediaPath(image);
+  }
 
   Future<void> start() async {
     if (_isLoading) return;

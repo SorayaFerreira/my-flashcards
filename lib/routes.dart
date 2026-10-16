@@ -37,6 +37,7 @@ class AppRoutes {
     final viewModel = ReviewViewModel(
       deckId: deckId,
       cardRepository: _dependencies.cards,
+      mediaRepository: _dependencies.media,
     );
     return MaterialPageRoute(
       builder: (_) => ReviewScreen(deckName: deckName, viewModel: viewModel),
