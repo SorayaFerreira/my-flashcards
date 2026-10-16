@@ -3,14 +3,22 @@ import 'package:sqflite/sqflite.dart';
 
 import 'data/repositories/card_repository.dart';
 import 'data/repositories/deck_repository.dart';
+import 'data/repositories/media_repository.dart';
 import 'data/services/database_service.dart';
+import 'data/services/image_picker_service.dart';
+import 'data/services/media_file_service.dart';
 
 /// The repositories shared by the whole app, created once at startup.
 class AppDependencies {
-  AppDependencies({required this.decks, required this.cards});
+  AppDependencies({
+    required this.decks,
+    required this.cards,
+    required this.media,
+  });
 
   final DeckRepository decks;
   final CardRepository cards;
+  final MediaRepository media;
 
   static Future<AppDependencies> create() async {
     final factory = databaseFactorySqflitePlugin;
@@ -19,9 +27,14 @@ class AppDependencies {
       path: p.join(await factory.getDatabasesPath(), DatabaseService.fileName),
     );
     await database.open();
+    final mediaFiles = await MediaFileService.create();
     return AppDependencies(
       decks: DeckRepository(database: database),
       cards: CardRepository(database: database),
+      media: MediaRepository(
+        files: mediaFiles,
+        imagePicker: ImagePickerService(),
+      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:my_flashcards/ui/review/widgets/flip_card.dart';
 
 import 'fakes/fake_card_repository.dart';
 import 'fakes/fake_deck_repository.dart';
+import 'fakes/fake_media_repository.dart';
 
 void main() {
   AppDependencies dependencies({
@@ -17,6 +18,7 @@ void main() {
   }) => AppDependencies(
     decks: FakeDeckRepository(decks),
     cards: FakeCardRepository(cards),
+    media: FakeMediaRepository(),
   );
 
   testWidgets('abre na lista de decks, seguindo o tema do sistema', (
