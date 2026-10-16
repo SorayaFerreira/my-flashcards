@@ -1,3 +1,5 @@
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -28,6 +30,9 @@ class AppDependencies {
     );
     await database.open();
     final mediaFiles = await MediaFileService.create();
+    // By default the plugin only uses the Android photo picker on API 36+.
+    final picker = ImagePickerPlatform.instance;
+    if (picker is ImagePickerAndroid) picker.useAndroidPhotoPicker = true;
     return AppDependencies(
       decks: DeckRepository(database: database, mediaFiles: mediaFiles),
       cards: CardRepository(database: database, mediaFiles: mediaFiles),
