@@ -43,7 +43,15 @@ class _FlipCardState extends State<FlipCard>
     super.dispose();
   }
 
-  void _onDragStart(DragStartDetails details) => _angle.stop();
+  // An accepted drag that the system cancels (e.g. the Android back gesture)
+  // reaches onHorizontalDragEnd, not onHorizontalDragCancel. Pointer cancels
+  // are tracked separately so such a drag springs back instead of flipping.
+  bool _pointerCancelled = false;
+
+  void _onDragStart(DragStartDetails details) {
+    _pointerCancelled = false;
+    _angle.stop();
+  }
 
   void _onDragUpdate(DragUpdateDetails details) {
     final angle = _angle.value + details.delta.dx / _width * math.pi;
@@ -59,7 +67,9 @@ class _FlipCardState extends State<FlipCard>
     final flung =
         velocity.abs() > FlipCard.flingVelocity && velocity.sign == turned.sign;
 
-    if (turned != 0 && (turned.abs() > math.pi / 2 || flung)) {
+    if (!_pointerCancelled &&
+        turned != 0 &&
+        (turned.abs() > math.pi / 2 || flung)) {
       _angle
           .animateTo(
             _restingAngle + turned.sign * math.pi,
@@ -77,6 +87,12 @@ class _FlipCardState extends State<FlipCard>
     }
   }
 
+  void _onDragCancel() => _angle.animateTo(
+    _restingAngle,
+    duration: FlipCard.flipDuration,
+    curve: Curves.easeOut,
+  );
+
   void _completeFlip() {
     setState(() => _showingBack = !_showingBack);
     _angle.value = _restingAngle;
@@ -89,31 +105,35 @@ class _FlipCardState extends State<FlipCard>
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         _width = width.isFinite && width > 0 ? width : 1;
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: _onDragStart,
-          onHorizontalDragUpdate: _onDragUpdate,
-          onHorizontalDragEnd: _onDragEnd,
-          child: AnimatedBuilder(
-            animation: _angle,
-            builder: (context, _) {
-              final angle = _angle.value;
-              final backVisible = math.cos(angle) < 0;
-              return Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001)
-                  ..rotateY(angle),
-                child: backVisible
-                    // Turn the back once more so its content isn't mirrored.
-                    ? Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.rotationY(math.pi),
-                        child: widget.back,
-                      )
-                    : widget.front,
-              );
-            },
+        return Listener(
+          onPointerCancel: (_) => _pointerCancelled = true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragStart: _onDragStart,
+            onHorizontalDragUpdate: _onDragUpdate,
+            onHorizontalDragEnd: _onDragEnd,
+            onHorizontalDragCancel: _onDragCancel,
+            child: AnimatedBuilder(
+              animation: _angle,
+              builder: (context, _) {
+                final angle = _angle.value;
+                final backVisible = math.cos(angle) < 0;
+                return Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001)
+                    ..rotateY(angle),
+                  child: backVisible
+                      // Turn the back once more so its content isn't mirrored.
+                      ? Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.rotationY(math.pi),
+                          child: widget.back,
+                        )
+                      : widget.front,
+                );
+              },
+            ),
           ),
         );
       },

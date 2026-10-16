@@ -111,4 +111,22 @@ void main() {
 
     expect(find.text('frente'), findsOneWidget);
   });
+
+  testWidgets('um arrasto cancelado volta para a frente', (tester) async {
+    await pumpCard(tester);
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(FlipCard)),
+    );
+    await gesture.moveBy(const Offset(30, 0));
+    await gesture.moveBy(const Offset(200, 0));
+    await tester.pump();
+    expect(find.text('verso'), findsOneWidget); // mid-turn, past half
+
+    await gesture.cancel();
+    await tester.pumpAndSettle();
+
+    expect(find.text('frente'), findsOneWidget);
+    expect(flips, isEmpty);
+  });
 }
