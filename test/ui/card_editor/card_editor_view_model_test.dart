@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/domain/models/card_side.dart';
 import 'package:my_flashcards/domain/models/flashcard.dart';
 import 'package:my_flashcards/domain/models/image_origin.dart';
 import 'package:my_flashcards/ui/card_editor/view_models/card_editor_view_model.dart';
+import 'package:my_flashcards/ui/card_editor/view_models/side_draft.dart';
 
 import '../../fakes/fake_card_repository.dart';
 import '../../fakes/fake_media_repository.dart';
@@ -402,5 +404,240 @@ void main() {
         expect(viewModel.imagePath(Side.front), '/media/img_salva.jpg');
       },
     );
+  });
+
+  group('áudio', () {
+    test('gravar e parar põe o áudio novo no lado, com a duração', () {
+      fakeAsync((async) {
+        final viewModel = newCard();
+        viewModel.startRecording(Side.back);
+        async.flushMicrotasks();
+        expect(viewModel.recordingSide, Side.back);
+        expect(viewModel.canSave, isFalse);
+
+        async.elapse(const Duration(seconds: 7));
+        expect(viewModel.recordingElapsed, const Duration(seconds: 7));
+
+        viewModel.stopRecording();
+        async.flushMicrotasks();
+
+        expect(viewModel.isRecording, isFalse);
+        expect(media.stopRecordingCalls, 1);
+        expect(
+          viewModel.draft(Side.back).audio,
+          const DraftFile('aud_1.m4a', isNew: true),
+        );
+        expect(viewModel.audioPath(Side.back), '/drafts/aud_1.m4a');
+        expect(viewModel.audioDuration(Side.back), const Duration(seconds: 7));
+      });
+    });
+
+    test('para sozinho aos 60 segundos e mantém o áudio', () {
+      fakeAsync((async) {
+        final viewModel = newCard();
+        viewModel.startRecording(Side.front);
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(seconds: 59));
+        expect(viewModel.isRecording, isTrue);
+
+        async.elapse(const Duration(seconds: 1));
+
+        expect(viewModel.isRecording, isFalse);
+        expect(viewModel.draft(Side.front).audio?.name, 'aud_1.m4a');
+        expect(
+          viewModel.audioDuration(Side.front),
+          CardEditorViewModel.maxRecording,
+        );
+      });
+    });
+
+    test('microfone negado mostra a mensagem e não grava', () async {
+      media.microphoneAllowed = false;
+      final viewModel = newCard();
+
+      expect(await viewModel.startRecording(Side.front), isFalse);
+
+      expect(viewModel.isRecording, isFalse);
+      expect(media.recordings, isEmpty);
+      expect(
+        viewModel.actionError,
+        CardEditorViewModel.microphoneDeniedMessage,
+      );
+    });
+
+    test('não grava dois lados ao mesmo tempo', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+
+      expect(await viewModel.startRecording(Side.back), isFalse);
+      expect(viewModel.recordingSide, Side.front);
+
+      await viewModel.stopRecording();
+    });
+
+    test('regravar apaga a gravação nova anterior', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+
+      expect(media.discarded, ['aud_1.m4a']);
+      expect(viewModel.draft(Side.front).audio?.name, 'aud_2.m4a');
+    });
+
+    test('togglePlay toca e para, e o fim do áudio é percebido', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+
+      await viewModel.togglePlay(Side.front);
+      expect(media.played, ['/drafts/aud_1.m4a']);
+      expect(viewModel.isPlaying(Side.front), isTrue);
+
+      media.finishPlayback();
+      expect(viewModel.isPlaying(Side.front), isFalse);
+
+      await viewModel.togglePlay(Side.front);
+      await viewModel.togglePlay(Side.front);
+      expect(viewModel.isPlaying(Side.front), isFalse);
+    });
+
+    test('começar a gravar para o som', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+      await viewModel.togglePlay(Side.front);
+
+      await viewModel.startRecording(Side.back);
+
+      expect(viewModel.isPlaying(Side.front), isFalse);
+      await viewModel.stopRecording();
+    });
+
+    test('descartar durante a gravação para e apaga o rascunho', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+
+      await viewModel.discard();
+
+      expect(viewModel.isRecording, isFalse);
+      expect(media.discarded, ['aud_1.m4a']);
+    });
+
+    test('um card já salvo mostra a duração do áudio', () async {
+      cards = FakeCardRepository([
+        Flashcard(
+          id: 7,
+          deckId: 1,
+          front: const CardSide(text: 'apple', audio: 'aud_salvo.m4a'),
+          back: const CardSide(text: 'maçã'),
+          createdAt: DateTime(2026),
+        ),
+      ]);
+      media.duration = const Duration(seconds: 3);
+      final viewModel = editCard();
+
+      await viewModel.load();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(viewModel.audioPath(Side.front), '/media/aud_salvo.m4a');
+      expect(viewModel.audioDuration(Side.front), const Duration(seconds: 3));
+    });
+
+    test('salvar move o áudio novo e grava no card', () async {
+      final viewModel = newCard()..setText(Side.front, 'apple');
+      await viewModel.startRecording(Side.back);
+      await viewModel.stopRecording();
+
+      expect(await viewModel.save(), isTrue);
+
+      expect(media.committed, ['aud_1.m4a']);
+      expect(cards.cards.last.back.audio, 'aud_1.m4a');
+    });
+
+    group('e salvamento', () {
+      // A new card with a recorded back audio and front text.
+      Future<CardEditorViewModel> readyToSave() async {
+        final viewModel = newCard()..setText(Side.front, 'apple');
+        await viewModel.startRecording(Side.back);
+        await viewModel.stopRecording();
+        return viewModel;
+      }
+
+      test('dois startRecording ao mesmo tempo criam uma gravação', () async {
+        final viewModel = newCard();
+
+        final first = viewModel.startRecording(Side.front);
+        final second = viewModel.startRecording(Side.front);
+
+        expect(await second, isFalse);
+        expect(await first, isTrue);
+        expect(media.recordings.length, 1);
+        await viewModel.stopRecording();
+      });
+
+      test('removeAudio durante o salvamento não muda nada', () async {
+        final viewModel = await readyToSave();
+        media.commitGate = Completer();
+        final save = viewModel.save();
+        await pumpEventQueue();
+
+        await viewModel.removeAudio(Side.back);
+        media.commitGate!.complete();
+
+        expect(await save, isTrue);
+        expect(cards.cards.last.back.audio, 'aud_1.m4a');
+        expect(media.discarded, isEmpty);
+      });
+
+      test(
+        'startRecording e togglePlay durante o salvamento não agem',
+        () async {
+          final viewModel = await readyToSave();
+          media.commitGate = Completer();
+          final save = viewModel.save();
+          await pumpEventQueue();
+
+          expect(await viewModel.startRecording(Side.front), isFalse);
+          await viewModel.togglePlay(Side.back);
+          media.commitGate!.complete();
+          await save;
+
+          expect(media.recordings.length, 1);
+          expect(media.played, isEmpty);
+          expect(viewModel.actionError, isNull);
+        },
+      );
+
+      test(
+        'durante a gravação no banco o áudio já aponta para media',
+        () async {
+          final viewModel = await readyToSave();
+          cards.createGate = Completer();
+          final save = viewModel.save();
+          await pumpEventQueue();
+
+          expect(viewModel.audioPath(Side.back), '/media/aud_1.m4a');
+
+          cards.createGate!.complete();
+          await save;
+          expect(viewModel.audioPath(Side.back), '/media/aud_1.m4a');
+        },
+      );
+    });
+
+    test('depois do dispose o fim do áudio não dá erro', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+      await viewModel.togglePlay(Side.front);
+
+      viewModel.dispose();
+
+      expect(media.finishPlayback, returnsNormally);
+    });
   });
 }

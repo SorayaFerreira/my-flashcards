@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/card_repository.dart';
@@ -14,12 +16,21 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
     this.cardId,
     required this._cardRepository,
     required this._mediaRepository,
-  });
+  }) {
+    _mediaRepository.playingPath.addListener(notifyListeners);
+  }
+
+  static const maxRecording = Duration(seconds: 60);
 
   static const loadErrorMessage = 'Não foi possível abrir o card.';
   static const saveErrorMessage = 'Não foi possível salvar. Tente de novo.';
   static const deleteErrorMessage = 'Não foi possível excluir o card.';
   static const imageErrorMessage = 'Não foi possível carregar a imagem.';
+  static const microphoneDeniedMessage =
+      'Sem acesso ao microfone. Ative em Configurações › Apps › '
+      'My Flashcards › Permissões.';
+  static const recordErrorMessage = 'Não foi possível gravar o áudio.';
+  static const playErrorMessage = 'Não foi possível tocar o áudio.';
 
   final int deckId;
   final int? cardId;
@@ -33,6 +44,13 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   bool _isLoading = false;
   bool _isSaving = false;
   bool _isPicking = false;
+  bool _isStartingRecording = false;
+
+  Side? _recordingSide;
+  String? _recordingName;
+  Duration _recordingElapsed = Duration.zero;
+  Timer? _ticker;
+  final Map<String, Duration> _durations = {};
 
   /// New files already moved to the media folder while a save is running.
   final Set<String> _committed = {};
@@ -45,11 +63,16 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   String? get loadError => _loadError;
   String? get actionError => _actionError;
 
+  Side? get recordingSide => _recordingSide;
+  bool get isRecording => _recordingSide != null;
+  Duration get recordingElapsed => _recordingElapsed;
+
   bool get hasChanges => _front != _initialFront || _back != _initialBack;
 
   bool get canSave =>
       !_isLoading &&
       !_isSaving &&
+      !isRecording &&
       _loadError == null &&
       !_front.isEmpty &&
       !_back.isEmpty;
@@ -60,12 +83,19 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   };
 
   /// The full path of the side's image, wherever the file currently lives.
-  String? imagePath(Side side) {
-    final image = draft(side).image;
-    if (image == null) return null;
-    return image.isNew && !_committed.contains(image.name)
-        ? _mediaRepository.draftPath(image.name)
-        : _mediaRepository.mediaPath(image.name);
+  String? imagePath(Side side) => _pathOf(draft(side).image);
+
+  /// The full path of the side's audio, wherever the file currently lives.
+  String? audioPath(Side side) => _pathOf(draft(side).audio);
+
+  Duration? audioDuration(Side side) {
+    final audio = draft(side).audio;
+    return audio == null ? null : _durations[audio.name];
+  }
+
+  bool isPlaying(Side side) {
+    final path = audioPath(side);
+    return path != null && _mediaRepository.playingPath.value == path;
   }
 
   Future<void> load() async {
@@ -78,6 +108,9 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
       case Ok(value: final card):
         _front = _initialFront = SideDraft.fromCardSide(card.front);
         _back = _initialBack = SideDraft.fromCardSide(card.back);
+        for (final audio in [card.front.audio, card.back.audio]) {
+          if (audio != null) _loadDuration(audio);
+        }
       case Error():
         _loadError = loadErrorMessage;
     }
@@ -125,6 +158,90 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
     _setDraft(side, draft(side).withImage(null));
   }
 
+  /// Returns false when nothing started: another recording is on, a save is
+  /// running, the microphone was denied or the recorder failed.
+  Future<bool> startRecording(Side side) async {
+    if (_isSaving || _isStartingRecording || isRecording) return false;
+    _isStartingRecording = true;
+    try {
+      _actionError = null;
+      switch (await _mediaRepository.requestMicrophone()) {
+        case Ok(value: true):
+          break;
+        case Ok():
+          return _fail(microphoneDeniedMessage);
+        case Error():
+          return _fail(recordErrorMessage);
+      }
+
+      await _mediaRepository.stopPlayback();
+      switch (await _mediaRepository.startRecording()) {
+        case Ok(value: final name):
+          if (_isSaving || isDisposed) {
+            // The save already took its snapshot; this file would be lost.
+            await _mediaRepository.stopRecording();
+            await _mediaRepository.discardDrafts([name]);
+            return false;
+          }
+          _recordingSide = side;
+          _recordingName = name;
+          _recordingElapsed = Duration.zero;
+          _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+          notifyListeners();
+          return true;
+        case Error():
+          return _fail(recordErrorMessage);
+      }
+    } finally {
+      _isStartingRecording = false;
+    }
+  }
+
+  /// Stops the recording and keeps what was recorded. Does nothing when no
+  /// recording is going on.
+  Future<void> stopRecording() async {
+    final side = _recordingSide;
+    final name = _recordingName;
+    if (side == null || name == null) return;
+    final elapsed = _recordingElapsed;
+    _ticker?.cancel();
+    _ticker = null;
+    _recordingSide = null;
+    _recordingName = null;
+
+    if (await _mediaRepository.stopRecording() is Error) {
+      await _mediaRepository.discardDrafts([name]);
+      if (!isDisposed) _fail(recordErrorMessage);
+      return;
+    }
+    await _dropIfNew(draft(side).audio);
+    _durations[name] = elapsed;
+    _setDraft(side, draft(side).withAudio(DraftFile(name, isNew: true)));
+  }
+
+  Future<void> removeAudio(Side side) async {
+    if (_isSaving) return;
+    if (isPlaying(side)) await _mediaRepository.stopPlayback();
+    await _dropIfNew(draft(side).audio);
+    _setDraft(side, draft(side).withAudio(null));
+  }
+
+  /// Returns false only when the sound could not be played.
+  Future<bool> togglePlay(Side side) async {
+    if (_isSaving) return true;
+    _actionError = null;
+    if (isPlaying(side)) {
+      await _mediaRepository.stopPlayback();
+      return true;
+    }
+    final path = audioPath(side);
+    if (path == null) return false;
+    if (await _mediaRepository.play(path) is Error) {
+      return _fail(playErrorMessage);
+    }
+    return true;
+  }
+
   Future<bool> save() async {
     if (!canSave) return false;
     _isSaving = true;
@@ -136,6 +253,7 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
     final newFiles = [...frontDraft.newFileNames, ...backDraft.newFileNames];
     final front = frontDraft.toCardSide();
     final back = backDraft.toCardSide();
+    await _mediaRepository.stopPlayback();
     if (await _mediaRepository.commitDrafts(newFiles) is Error) {
       await _mediaRepository.revertCommit(newFiles);
       return _saveFailed();
@@ -177,17 +295,59 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
 
   /// Throws away the files created while editing. Call it when leaving
   /// without saving.
-  Future<void> discard() => _mediaRepository.discardDrafts([
-    ..._front.newFileNames,
-    ..._back.newFileNames,
-  ]);
+  Future<void> discard() async {
+    await stopRecording();
+    await _mediaRepository.stopPlayback();
+    await _mediaRepository.discardDrafts([
+      ..._front.newFileNames,
+      ..._back.newFileNames,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    if (isRecording) _mediaRepository.stopRecording();
+    _mediaRepository.playingPath.removeListener(notifyListeners);
+    _mediaRepository.stopPlayback();
+    super.dispose();
+  }
+
+  void _tick() {
+    _recordingElapsed += const Duration(seconds: 1);
+    if (_recordingElapsed >= maxRecording) {
+      stopRecording();
+    } else {
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadDuration(String name) async {
+    final duration = await _mediaRepository.durationOf(
+      _mediaRepository.mediaPath(name),
+    );
+    if (duration == null) return;
+    _durations[name] = duration;
+    notifyListeners();
+  }
+
+  String? _pathOf(DraftFile? file) {
+    if (file == null) return null;
+    return file.isNew && !_committed.contains(file.name)
+        ? _mediaRepository.draftPath(file.name)
+        : _mediaRepository.mediaPath(file.name);
+  }
+
+  bool _fail(String message) {
+    _actionError = message;
+    notifyListeners();
+    return false;
+  }
 
   bool _saveFailed() {
     _committed.clear();
     _isSaving = false;
-    _actionError = saveErrorMessage;
-    notifyListeners();
-    return false;
+    return _fail(saveErrorMessage);
   }
 
   /// Deletes a file created in this session. Files that were already saved
