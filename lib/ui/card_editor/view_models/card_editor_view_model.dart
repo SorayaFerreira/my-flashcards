@@ -50,6 +50,7 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   String? _recordingName;
   Duration _recordingElapsed = Duration.zero;
   Timer? _ticker;
+  Future<void>? _stopping;
   final Map<String, Duration> _durations = {};
 
   /// New files already moved to the media folder while a save is running.
@@ -64,6 +65,8 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   String? get actionError => _actionError;
 
   Side? get recordingSide => _recordingSide;
+
+  /// True while recording and until the recording is fully stopped.
   bool get isRecording => _recordingSide != null;
   Duration get recordingElapsed => _recordingElapsed;
 
@@ -174,6 +177,7 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
           return _fail(recordErrorMessage);
       }
 
+      if (_isSaving || isDisposed) return false;
       await _mediaRepository.stopPlayback();
       switch (await _mediaRepository.startRecording()) {
         case Ok(value: final name):
@@ -198,24 +202,35 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   }
 
   /// Stops the recording and keeps what was recorded. Does nothing when no
-  /// recording is going on.
-  Future<void> stopRecording() async {
-    final side = _recordingSide;
-    final name = _recordingName;
-    if (side == null || name == null) return;
+  /// recording is going on. [isRecording] stays true until it is done.
+  Future<void> stopRecording() {
+    final pending = _stopping;
+    if (pending != null) return pending;
+    if (_recordingSide == null) return Future.value();
+    final stopping = _stop();
+    _stopping = stopping;
+    return stopping.whenComplete(() => _stopping = null);
+  }
+
+  Future<void> _stop() async {
+    final side = _recordingSide!;
+    final name = _recordingName!;
     final elapsed = _recordingElapsed;
     _ticker?.cancel();
     _ticker = null;
-    _recordingSide = null;
-    _recordingName = null;
 
-    if (await _mediaRepository.stopRecording() is Error) {
+    final failed = await _mediaRepository.stopRecording() is Error;
+    if (failed || _isSaving || isDisposed) {
       await _mediaRepository.discardDrafts([name]);
-      if (!isDisposed) _fail(recordErrorMessage);
+      _recordingSide = null;
+      _recordingName = null;
+      if (failed && !isDisposed) _fail(recordErrorMessage);
       return;
     }
     await _dropIfNew(draft(side).audio);
     _durations[name] = elapsed;
+    _recordingSide = null;
+    _recordingName = null;
     _setDraft(side, draft(side).withAudio(DraftFile(name, isNew: true)));
   }
 
@@ -307,7 +322,9 @@ class CardEditorViewModel extends ChangeNotifier with DisposeSafeNotifier {
   @override
   void dispose() {
     _ticker?.cancel();
-    if (isRecording) _mediaRepository.stopRecording();
+    if (_recordingSide != null && _stopping == null) {
+      _mediaRepository.stopRecording();
+    }
     _mediaRepository.playingPath.removeListener(notifyListeners);
     _mediaRepository.stopPlayback();
     super.dispose();

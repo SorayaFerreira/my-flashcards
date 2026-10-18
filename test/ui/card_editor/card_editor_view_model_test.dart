@@ -629,14 +629,85 @@ void main() {
       );
     });
 
+    group('parada da gravação', () {
+      test('enquanto a parada não termina, não salva nem grava', () async {
+        final viewModel = newCard()..setText(Side.front, 'a');
+        await viewModel.startRecording(Side.back);
+        media.stopGate = Completer();
+        final stop = viewModel.stopRecording();
+        await pumpEventQueue();
+
+        expect(viewModel.isRecording, isTrue);
+        expect(viewModel.canSave, isFalse);
+        expect(await viewModel.startRecording(Side.front), isFalse);
+
+        media.stopGate!.complete();
+        await stop;
+        expect(viewModel.isRecording, isFalse);
+        expect(viewModel.draft(Side.back).audio?.name, 'aud_1.m4a');
+        expect(media.recordings.length, 1);
+      });
+
+      test('discard durante a parada espera e apaga o arquivo', () async {
+        final viewModel = newCard();
+        await viewModel.startRecording(Side.front);
+        media.stopGate = Completer();
+        final stop = viewModel.stopRecording();
+        final discard = viewModel.discard();
+        await pumpEventQueue();
+
+        media.stopGate!.complete();
+        await stop;
+        await discard;
+
+        expect(media.discarded, ['aud_1.m4a']);
+        expect(viewModel.isRecording, isFalse);
+      });
+
+      test('parada que falha apaga o rascunho e avisa', () async {
+        final viewModel = newCard();
+        await viewModel.startRecording(Side.front);
+        media.stopError = Exception('falhou');
+
+        await viewModel.stopRecording();
+
+        expect(media.discarded, ['aud_1.m4a']);
+        expect(viewModel.draft(Side.front).audio, isNull);
+        expect(viewModel.isRecording, isFalse);
+        expect(viewModel.actionError, CardEditorViewModel.recordErrorMessage);
+      });
+    });
+
+    test('erro ao pedir o microfone mostra a mensagem de gravação', () async {
+      media.microphoneError = Exception('x');
+      final viewModel = newCard();
+
+      expect(await viewModel.startRecording(Side.front), isFalse);
+
+      expect(viewModel.actionError, CardEditorViewModel.recordErrorMessage);
+    });
+
+    test('erro ao tocar mostra a mensagem de reprodução', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+      media.playError = Exception('x');
+
+      expect(await viewModel.togglePlay(Side.front), isFalse);
+
+      expect(viewModel.actionError, CardEditorViewModel.playErrorMessage);
+    });
+
     test('depois do dispose o fim do áudio não dá erro', () async {
       final viewModel = newCard();
       await viewModel.startRecording(Side.front);
       await viewModel.stopRecording();
       await viewModel.togglePlay(Side.front);
 
+      expect(media.hasPlayingListeners, isTrue);
       viewModel.dispose();
 
+      expect(media.hasPlayingListeners, isFalse);
       expect(media.finishPlayback, returnsNormally);
     });
   });

@@ -17,11 +17,17 @@ class FakeMediaRepository implements MediaRepository {
   Exception? commitError;
   bool microphoneAllowed = true;
   Exception? recordError;
+  Exception? microphoneError;
+  Exception? stopError;
+  Exception? playError;
   Duration? duration = const Duration(seconds: 4);
 
   /// When set, [pickImage] / [commitDrafts] wait for it before answering.
   Completer<void>? pickGate;
   Completer<void>? commitGate;
+
+  /// When set, [stopRecording] waits for it before answering.
+  Completer<void>? stopGate;
 
   final picks = <ImageOrigin>[];
   final committed = <String>[];
@@ -32,7 +38,10 @@ class FakeMediaRepository implements MediaRepository {
   var clearedDrafts = 0;
   var stopRecordingCalls = 0;
 
-  final _playingPath = ValueNotifier<String?>(null);
+  final _playingPath = _ProbeNotifier();
+
+  /// Whether anything still listens to [playingPath].
+  bool get hasPlayingListeners => _playingPath.isListened;
 
   /// Simulates the audio reaching its end.
   void finishPlayback() => _playingPath.value = null;
@@ -73,8 +82,11 @@ class FakeMediaRepository implements MediaRepository {
   Future<void> clearDrafts() async => clearedDrafts++;
 
   @override
-  Future<Result<bool>> requestMicrophone() async =>
-      Result.ok(microphoneAllowed);
+  Future<Result<bool>> requestMicrophone() async {
+    final error = microphoneError;
+    if (error != null) return Result.error(error);
+    return Result.ok(microphoneAllowed);
+  }
 
   @override
   Future<Result<String>> startRecording() async {
@@ -88,11 +100,16 @@ class FakeMediaRepository implements MediaRepository {
   @override
   Future<Result<void>> stopRecording() async {
     stopRecordingCalls++;
+    await stopGate?.future;
+    final error = stopError;
+    if (error != null) return Result.error(error);
     return const Result.ok(null);
   }
 
   @override
   Future<Result<void>> play(String path) async {
+    final error = playError;
+    if (error != null) return Result.error(error);
     played.add(path);
     _playingPath.value = path;
     return const Result.ok(null);
@@ -106,4 +123,10 @@ class FakeMediaRepository implements MediaRepository {
 
   @override
   Future<Duration?> durationOf(String path) async => duration;
+}
+
+class _ProbeNotifier extends ValueNotifier<String?> {
+  _ProbeNotifier() : super(null);
+
+  bool get isListened => hasListeners;
 }
