@@ -1,12 +1,19 @@
+import 'package:flutter/foundation.dart';
+
 import '../../domain/models/deck.dart';
 import '../../utils/result.dart';
 import '../services/database_service.dart';
+import '../services/media_file_service.dart';
 
 class DeckRepository {
-  DeckRepository({required this._database, DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  DeckRepository({
+    required this._database,
+    required this._mediaFiles,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   final DatabaseService _database;
+  final MediaFileService _mediaFiles;
   final DateTime Function() _now;
 
   static const _selectDecks = '''
@@ -51,7 +58,23 @@ class DeckRepository {
   });
 
   Future<Result<void>> deleteDeck(int id) => guard(() async {
+    final rows = await _database.db.query(
+      'cards',
+      columns: ['front_image', 'front_audio', 'back_image', 'back_audio'],
+      where: 'deck_id = ?',
+      whereArgs: [id],
+    );
     await _database.db.delete('decks', where: 'id = ?', whereArgs: [id]);
+    final names = [
+      for (final row in rows)
+        for (final value in row.values)
+          if (value is String) value,
+    ];
+    try {
+      await _mediaFiles.deleteMedia(names);
+    } on Exception catch (error) {
+      debugPrint('$error');
+    }
   });
 }
 

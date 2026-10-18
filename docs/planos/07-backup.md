@@ -475,6 +475,8 @@ git commit -m "feat: escolhe e compartilha o arquivo de backup"
 
 ### Tarefa 3: `BackupRepository`
 
+> **Recomendação da revisão da etapa 4 (2026-10-16):** um banco importado pode trazer nomes de arquivo inesperados. Antes de apagar ou abrir um arquivo de mídia pelo nome guardado no banco, confira que `p.basename(nome) == nome` (sem `../`). E depois da troca de dados, rode `ensureDirectories()`, porque `commitDrafts` supõe que `media/` existe.
+
 **Arquivos:**
 - Criar: `lib/data/repositories/backup_repository.dart`
 - Criar: `test/fakes/fake_backup_repository.dart`

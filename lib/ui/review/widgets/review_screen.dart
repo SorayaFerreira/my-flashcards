@@ -117,12 +117,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
               front: ReviewCardFace(
                 label: 'Frente',
                 reviewCount: card.reviewCount,
-                child: CardSideView(text: card.front.text),
+                child: CardSideView(
+                  text: card.front.text,
+                  imagePath: _viewModel.imagePathOf(card.front),
+                ),
               ),
               back: ReviewCardFace(
                 label: 'Verso',
                 reviewCount: card.reviewCount,
-                child: CardSideView(text: card.back.text),
+                child: CardSideView(
+                  text: card.back.text,
+                  imagePath: _viewModel.imagePathOf(card.back),
+                ),
               ),
               onFlip: _onFlip,
             ),

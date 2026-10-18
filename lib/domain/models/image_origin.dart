@@ -1,0 +1,1 @@
+enum ImageOrigin { camera, gallery }

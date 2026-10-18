@@ -1,13 +1,20 @@
+import 'package:flutter/foundation.dart';
+
 import '../../domain/models/card_side.dart';
 import '../../domain/models/flashcard.dart';
 import '../../utils/result.dart';
 import '../services/database_service.dart';
+import '../services/media_file_service.dart';
 
 class CardRepository {
-  CardRepository({required this._database, DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  CardRepository({
+    required this._database,
+    required this._mediaFiles,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   final DatabaseService _database;
+  final MediaFileService _mediaFiles;
   final DateTime Function() _now;
 
   Future<Result<List<Flashcard>>> getCards(int deckId) => guard(() async {
@@ -42,17 +49,26 @@ class CardRepository {
     required CardSide front,
     required CardSide back,
   }) => guard(() async {
-    final updated = await _database.db.update(
+    final old = _cardFromRow(await _findRow(id));
+    await _database.db.update(
       'cards',
       {..._sideToRow('front', front), ..._sideToRow('back', back)},
       where: 'id = ?',
       whereArgs: [id],
     );
-    if (updated == 0) throw NotFoundException('O card $id não existe.');
+    final kept = {...front.fileNames, ...back.fileNames};
+    await _deleteFiles(old.fileNames.where((name) => !kept.contains(name)));
   });
 
   Future<Result<void>> deleteCard(int id) => guard(() async {
+    final rows = await _database.db.query(
+      'cards',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (rows.isEmpty) return;
     await _database.db.delete('cards', where: 'id = ?', whereArgs: [id]);
+    await _deleteFiles(_cardFromRow(rows.single).fileNames);
   });
 
   /// Adds one review to the card and returns its new count.
@@ -72,6 +88,16 @@ class CardRepository {
       return rows.single['review_count']! as int;
     }),
   );
+
+  /// A file that can't be deleted only wastes space, so it never fails the
+  /// operation that made it unused.
+  Future<void> _deleteFiles(Iterable<String> names) async {
+    try {
+      await _mediaFiles.deleteMedia(names);
+    } on Exception catch (error) {
+      debugPrint('$error');
+    }
+  }
 
   Future<Map<String, Object?>> _findRow(int id) async {
     final rows = await _database.db.query(

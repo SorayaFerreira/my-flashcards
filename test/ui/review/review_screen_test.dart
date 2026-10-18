@@ -9,6 +9,7 @@ import 'package:my_flashcards/ui/review/widgets/flip_card.dart';
 import 'package:my_flashcards/ui/review/widgets/review_screen.dart';
 
 import '../../fakes/fake_card_repository.dart';
+import '../../fakes/fake_media_repository.dart';
 
 void main() {
   const hint = '⟵ arraste para virar ⟶';
@@ -32,6 +33,7 @@ void main() {
           viewModel: ReviewViewModel(
             deckId: 1,
             cardRepository: cards,
+            mediaRepository: FakeMediaRepository(),
             random: Random(1),
           ),
         ),
@@ -147,5 +149,22 @@ void main() {
     await flip(tester);
 
     expect(find.text('Não foi possível salvar a revisão.'), findsOneWidget);
+  });
+
+  testWidgets('mostra a imagem do lado, ou o aviso se o arquivo sumiu', (
+    tester,
+  ) async {
+    await pumpScreen(tester, [
+      Flashcard(
+        id: 1,
+        deckId: 1,
+        front: const CardSide(text: 'apple', image: 'img_1.jpg'),
+        back: const CardSide(text: 'maçã'),
+        createdAt: DateTime(2026),
+      ),
+    ]);
+
+    expect(find.text('apple'), findsOneWidget);
+    expect(find.text('Imagem não encontrada'), findsOneWidget);
   });
 }

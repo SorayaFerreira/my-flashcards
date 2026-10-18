@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/media_image.dart';
+
 class SideEditor extends StatelessWidget {
   const SideEditor({
     super.key,
@@ -7,18 +9,29 @@ class SideEditor extends StatelessWidget {
     required this.controller,
     required this.isEmpty,
     required this.onTextChanged,
+    required this.imagePath,
+    required this.onTakePhoto,
+    required this.onPickFromGallery,
+    required this.onRemoveImage,
     this.autofocus = false,
+    this.mediaEnabled = true,
   });
 
   final String label;
   final TextEditingController controller;
   final bool isEmpty;
   final ValueChanged<String> onTextChanged;
+  final String? imagePath;
+  final VoidCallback onTakePhoto;
+  final VoidCallback onPickFromGallery;
+  final VoidCallback onRemoveImage;
   final bool autofocus;
+  final bool mediaEnabled;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final imagePath = this.imagePath;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -36,6 +49,43 @@ class SideEditor extends StatelessWidget {
             border: OutlineInputBorder(),
           ),
         ),
+        const SizedBox(height: 12),
+        if (imagePath == null)
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: mediaEnabled ? onTakePhoto : null,
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: const Text('Câmera'),
+              ),
+              OutlinedButton.icon(
+                onPressed: mediaEnabled ? onPickFromGallery : null,
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Galeria'),
+              ),
+            ],
+          )
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: MediaImage(
+                  path: imagePath,
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              IconButton(
+                onPressed: mediaEnabled ? onRemoveImage : null,
+                tooltip: 'Remover imagem',
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
         if (isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),

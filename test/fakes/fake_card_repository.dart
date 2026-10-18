@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:my_flashcards/data/repositories/card_repository.dart';
 import 'package:my_flashcards/domain/models/card_side.dart';
 import 'package:my_flashcards/domain/models/flashcard.dart';
@@ -9,6 +11,9 @@ class FakeCardRepository implements CardRepository {
 
   final List<Flashcard> _cards;
   Exception? failWith;
+
+  /// When set, [createCard] waits for it before writing.
+  Completer<void>? createGate;
   var _nextId = 1000;
 
   List<Flashcard> get cards => List.unmodifiable(_cards);
@@ -49,17 +54,20 @@ class FakeCardRepository implements CardRepository {
     required int deckId,
     required CardSide front,
     required CardSide back,
-  }) => _answer(() {
-    final card = Flashcard(
-      id: _nextId++,
-      deckId: deckId,
-      front: front,
-      back: back,
-      createdAt: DateTime(2026, 10, 12).add(Duration(minutes: _nextId)),
-    );
-    _cards.add(card);
-    return card;
-  });
+  }) async {
+    await createGate?.future;
+    return _answer(() {
+      final card = Flashcard(
+        id: _nextId++,
+        deckId: deckId,
+        front: front,
+        back: back,
+        createdAt: DateTime(2026, 10, 12).add(Duration(minutes: _nextId)),
+      );
+      _cards.add(card);
+      return card;
+    });
+  }
 
   @override
   Future<Result<void>> updateCard({

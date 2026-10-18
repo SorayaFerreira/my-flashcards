@@ -6,5 +6,6 @@ import 'app_dependencies.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final dependencies = await AppDependencies.create();
+  await dependencies.media.clearDrafts();
   runApp(App(dependencies: dependencies));
 }

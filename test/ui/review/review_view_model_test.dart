@@ -6,6 +6,7 @@ import 'package:my_flashcards/domain/models/flashcard.dart';
 import 'package:my_flashcards/ui/review/view_models/review_view_model.dart';
 
 import '../../fakes/fake_card_repository.dart';
+import '../../fakes/fake_media_repository.dart';
 
 void main() {
   late FakeCardRepository cards;
@@ -30,6 +31,7 @@ void main() {
     viewModel = ReviewViewModel(
       deckId: 1,
       cardRepository: cards,
+      mediaRepository: FakeMediaRepository(),
       random: Random(1),
     );
   });
@@ -140,6 +142,7 @@ void main() {
     final vm = ReviewViewModel(
       deckId: 1,
       cardRepository: pair,
+      mediaRepository: FakeMediaRepository(),
       random: Random(1),
     );
     await vm.start();
@@ -161,7 +164,11 @@ void main() {
   });
 
   test('deck vazio termina na hora com zero cards', () async {
-    final empty = ReviewViewModel(deckId: 42, cardRepository: cards);
+    final empty = ReviewViewModel(
+      deckId: 42,
+      cardRepository: cards,
+      mediaRepository: FakeMediaRepository(),
+    );
 
     await empty.start();
 
@@ -175,5 +182,13 @@ void main() {
     await viewModel.start();
 
     expect(viewModel.loadError, ReviewViewModel.loadErrorMessage);
+  });
+
+  test('imagePathOf aponta para a pasta media', () {
+    expect(
+      viewModel.imagePathOf(const CardSide(image: 'img_1.jpg')),
+      '/media/img_1.jpg',
+    );
+    expect(viewModel.imagePathOf(const CardSide(text: 'sem imagem')), isNull);
   });
 }

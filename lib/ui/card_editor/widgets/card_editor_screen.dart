@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/models/card_side.dart';
+import '../../../domain/models/image_origin.dart';
 import '../view_models/card_editor_view_model.dart';
 import 'side_editor.dart';
 
@@ -97,7 +98,9 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
         ],
       ),
     );
-    if (discard == true && mounted) Navigator.of(context).pop(false);
+    if (discard != true) return;
+    await _viewModel.discard();
+    if (mounted) Navigator.of(context).pop(false);
   }
 
   @override
@@ -157,7 +160,16 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
       controller: controller,
       isEmpty: _viewModel.draft(side).isEmpty,
       autofocus: side == Side.front && _viewModel.isNew,
+      mediaEnabled: !_viewModel.isSaving,
       onTextChanged: (text) => _viewModel.setText(side, text),
+      imagePath: _viewModel.imagePath(side),
+      onTakePhoto: () => _pickImage(side, ImageOrigin.camera),
+      onPickFromGallery: () => _pickImage(side, ImageOrigin.gallery),
+      onRemoveImage: () => _viewModel.removeImage(side),
     );
+  }
+
+  Future<void> _pickImage(Side side, ImageOrigin origin) async {
+    if (!await _viewModel.pickImage(side, origin)) _showActionError();
   }
 }
