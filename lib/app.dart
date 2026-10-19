@@ -34,6 +34,7 @@ class _AppState extends State<App> {
           viewModel: _deckListViewModel,
           onOpenDeck: (deck) =>
               Navigator.of(context).push(_routes.deckDetail(deck.id)),
+          onOpenSettings: () => Navigator.of(context).push(_routes.settings()),
         ),
       ),
     );

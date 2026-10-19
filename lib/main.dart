@@ -7,5 +7,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final dependencies = await AppDependencies.create();
   await dependencies.media.clearDrafts();
+  await dependencies.reminders.topUp();
   runApp(App(dependencies: dependencies));
 }

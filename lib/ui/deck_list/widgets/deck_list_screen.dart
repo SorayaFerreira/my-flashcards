@@ -24,6 +24,7 @@ class DeckListScreen extends StatefulWidget {
     super.key,
     required this.viewModel,
     required this.onOpenDeck,
+    required this.onOpenSettings,
   });
 
   final DeckListViewModel viewModel;
@@ -31,6 +32,10 @@ class DeckListScreen extends StatefulWidget {
   /// Opens a deck. The list reloads when it completes, because the user may
   /// have added or removed cards meanwhile.
   final Future<void> Function(Deck deck) onOpenDeck;
+
+  /// Opens the settings. The list reloads afterwards, since importing a
+  /// backup there replaces every deck.
+  final Future<void> Function() onOpenSettings;
 
   @override
   State<DeckListScreen> createState() => _DeckListScreenState();
@@ -55,6 +60,11 @@ class _DeckListScreenState extends State<DeckListScreen> {
 
   Future<void> _openDeck(Deck deck) async {
     await widget.onOpenDeck(deck);
+    if (mounted) await _viewModel.load();
+  }
+
+  Future<void> _openSettings() async {
+    await widget.onOpenSettings();
     if (mounted) await _viewModel.load();
   }
 
@@ -111,7 +121,16 @@ class _DeckListScreenState extends State<DeckListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Flashcards')),
+      appBar: AppBar(
+        title: const Text('My Flashcards'),
+        actions: [
+          IconButton(
+            onPressed: _openSettings,
+            tooltip: 'Configurações',
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _createDeck,
         tooltip: 'Novo deck',

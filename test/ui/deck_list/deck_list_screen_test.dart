@@ -11,12 +11,14 @@ void main() {
     WidgetTester tester,
     FakeDeckRepository repository, {
     Future<void> Function(Deck deck)? onOpenDeck,
+    Future<void> Function()? onOpenSettings,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DeckListScreen(
           viewModel: DeckListViewModel(deckRepository: repository),
           onOpenDeck: onOpenDeck ?? (_) async {},
+          onOpenSettings: onOpenSettings ?? () async {},
         ),
       ),
     );
@@ -197,5 +199,24 @@ void main() {
 
     expect(opened, [1]);
     expect(find.text('Verbos (editado)'), findsOneWidget);
+  });
+
+  testWidgets('⚙ abre as configurações e recarrega ao voltar', (tester) async {
+    final repository = FakeDeckRepository();
+    var opened = 0;
+    await pumpScreen(
+      tester,
+      repository,
+      onOpenSettings: () async {
+        opened++;
+        await repository.createDeck('Vindo do backup');
+      },
+    );
+
+    await tester.tap(find.byTooltip('Configurações'));
+    await tester.pumpAndSettle();
+
+    expect(opened, 1);
+    expect(find.text('Vindo do backup'), findsOneWidget);
   });
 }
