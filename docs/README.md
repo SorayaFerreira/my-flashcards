@@ -20,6 +20,7 @@ Esta pasta guarda os requisitos, o design e os planos de implementação do app.
   - **Etapa 3** concluída em 2026-10-16: revisão com o card que vira ao arrastar e o contador.
   - **Etapa 4** concluída em 2026-10-16: imagens pela câmera e pela galeria.
   - **Etapa 5** concluída em 2026-10-18: gravar e tocar áudio.
-  - **Etapa 6** implementada em 2026-10-19 (lembrete diário e tela de configurações). Falta o teste no celular.
-  - **Próxima:** etapa 7, backup.
+  - **Etapa 6** concluída em 2026-10-19: lembrete diário e tela de configurações.
+  - **Etapa 7** implementada em 2026-10-20 (exportar e importar backup). Falta o teste no celular.
+  - **Próxima:** etapa 8, acabamento e release.
 

@@ -1817,6 +1817,8 @@ git commit -m "feat: exportar e importar backup pelas configurações"
 
 ### Tarefa 6: conferir no celular e fechar a etapa
 
+> **Ajustes feitos na execução (2026-10-20):** a troca de dados virou uma troca anotada passo a passo, com desfazer exato; o rollback mudou para `files/backup_rollback/rollback-<epoch-ms>/`; a validação ficou estrita (entradas, links, tipos extraídos, `user_version`, nomes de mídia); as mídias entram sem compressão; as cópias no cache são limpas; a importação avisa se o lembrete for desligado por falta de permissão. Veja "Backup: importar" no [design](../design.md). O merge no `main` é feito pela Soraya, por pull request, e não pelo comando do passo 3.
+
 **Arquivos:** nenhum.
 
 - [ ] **Passo 1: rodar no celular**
@@ -1843,6 +1845,7 @@ Antes, deixe alguns decks com cards de texto, imagem e áudio, e o lembrete liga
 - [ ] Os áudios tocam depois da importação
 - [ ] O lembrete continua ligado (confira com `adb shell dumpsys alarm | grep -A2 com.sorayaferreira.myflashcards`)
 - [ ] Importar um zip qualquer (por exemplo, de fotos) mostra *"Este arquivo não é um backup do My Flashcards."*
+- [ ] Exportar com o lembrete ligado e importar num celular (ou instalação) **sem** permissão de notificações mostra o aviso de que o lembrete foi desligado
 - [ ] Os `.zip` antigos somem da pasta temporária depois de reabrir o app:
   ```bash
   adb shell run-as com.sorayaferreira.myflashcards ls cache/backup
