@@ -38,28 +38,32 @@ class SettingsViewModel extends ChangeNotifier with DisposeSafeNotifier {
     _message = null;
     notifyListeners();
 
-    if (enabled) {
-      switch (await _reminderRepository.enable()) {
-        case Ok(value: true):
-          _reminderEnabled = true;
-        case Ok():
-          _message = permissionDeniedMessage;
-        case Error():
-          _message = reminderErrorMessage;
-          await _syncStoredState();
+    // An unexpected error still propagates, but must not leave the switch
+    // disabled for good.
+    try {
+      if (enabled) {
+        switch (await _reminderRepository.enable()) {
+          case Ok(value: true):
+            _reminderEnabled = true;
+          case Ok():
+            _message = permissionDeniedMessage;
+          case Error():
+            _message = reminderErrorMessage;
+            await _syncStoredState();
+        }
+      } else {
+        switch (await _reminderRepository.disable()) {
+          case Ok():
+            _reminderEnabled = false;
+          case Error():
+            _message = reminderErrorMessage;
+            await _syncStoredState();
+        }
       }
-    } else {
-      switch (await _reminderRepository.disable()) {
-        case Ok():
-          _reminderEnabled = false;
-        case Error():
-          _message = reminderErrorMessage;
-          await _syncStoredState();
-      }
+    } finally {
+      _isBusy = false;
+      notifyListeners();
     }
-
-    _isBusy = false;
-    notifyListeners();
     return _message == null;
   }
 

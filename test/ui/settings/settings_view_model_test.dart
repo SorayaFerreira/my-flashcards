@@ -13,6 +13,12 @@ class _EnableFailsAfterSaving extends FakeReminderRepository {
   }
 }
 
+/// Throws instead of returning an Error, like an unexpected bug would.
+class _EnableThrows extends FakeReminderRepository {
+  @override
+  Future<Result<bool>> enable() async => throw StateError('bug');
+}
+
 void main() {
   late FakeReminderRepository reminders;
   late SettingsViewModel viewModel;
@@ -86,5 +92,16 @@ void main() {
     expect(viewModel.message, isNull);
     expect(await first, isTrue);
     expect(reminders.enableCalls, 1);
+  });
+
+  test('erro inesperado se propaga, mas a chave não fica travada', () async {
+    final viewModel = SettingsViewModel(reminderRepository: _EnableThrows());
+
+    await expectLater(
+      viewModel.setReminderEnabled(true),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(viewModel.isBusy, isFalse);
   });
 }

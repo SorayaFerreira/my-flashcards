@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_10y.dart' as tzdata;
@@ -10,6 +11,17 @@ class NotificationsUnavailableException implements Exception {
 
   @override
   String toString() => 'NotificationsUnavailableException';
+}
+
+/// Thrown when the plugin refuses a schedule, such as a time it considers to
+/// be in the past. Wraps its [ArgumentError] so that `guard` can catch it.
+class NotificationScheduleException implements Exception {
+  const NotificationScheduleException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'NotificationScheduleException: $message';
 }
 
 class NotificationService {
@@ -34,14 +46,24 @@ class NotificationService {
 
   Future<void> initialize() async {
     tzdata.initializeTimeZones();
-    final local = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(local.identifier));
+    await refreshTimeZone();
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('ic_notification'),
       ),
     );
     _ready = true;
+  }
+
+  /// Re-reads the device time zone, which may have changed while the app was
+  /// alive. If it can't be read, [tz.local] stays as it is.
+  Future<void> refreshTimeZone() async {
+    try {
+      final local = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(local.identifier));
+    } on Object catch (error) {
+      debugPrint('Could not refresh the time zone: $error');
+    }
   }
 
   /// Shows the system prompt the first time. Returns whether notifications
@@ -60,21 +82,29 @@ class NotificationService {
   /// minutes late, which spares the app the exact-alarm permission.
   Future<void> schedule({required int id, required DateTime at}) async {
     _requireReady();
-    await _plugin.zonedSchedule(
-      id: id,
-      scheduledDate: tz.TZDateTime(
-        tz.local,
-        at.year,
-        at.month,
-        at.day,
-        at.hour,
-        at.minute,
-      ),
-      notificationDetails: _details,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      title: 'Hora de revisar!',
-      body: 'Seus flashcards estão esperando por você.',
+    final when = tz.TZDateTime(
+      tz.local,
+      at.year,
+      at.month,
+      at.day,
+      at.hour,
+      at.minute,
     );
+    // The plugin throws for a past time, which happens when tz.local
+    // disagrees with the device; such a day is simply skipped.
+    if (!when.isAfter(tz.TZDateTime.now(tz.local))) return;
+    try {
+      await _plugin.zonedSchedule(
+        id: id,
+        scheduledDate: when,
+        notificationDetails: _details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        title: 'Hora de revisar!',
+        body: 'Seus flashcards estão esperando por você.',
+      );
+    } on ArgumentError catch (error) {
+      throw NotificationScheduleException('$error');
+    }
   }
 
   Future<void> cancelAll() => _plugin.cancelAll();
