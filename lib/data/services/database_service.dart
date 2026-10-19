@@ -66,6 +66,27 @@ class DatabaseService {
       await other.close();
     }
   }
+
+  /// Every media file name stored in the database at [path], read-only.
+  Future<List<String>> mediaNamesIn(String path) async {
+    final other = await _factory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(readOnly: true, singleInstance: false),
+    );
+    try {
+      final rows = await other.query(
+        'cards',
+        columns: ['front_image', 'front_audio', 'back_image', 'back_audio'],
+      );
+      return [
+        for (final row in rows)
+          for (final value in row.values)
+            if (value != null) value.toString(),
+      ];
+    } finally {
+      await other.close();
+    }
+  }
 }
 
 Future<void> _createSchema(Database db, int version) async {

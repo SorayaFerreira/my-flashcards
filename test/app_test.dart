@@ -7,6 +7,7 @@ import 'package:my_flashcards/domain/models/deck.dart';
 import 'package:my_flashcards/domain/models/flashcard.dart';
 import 'package:my_flashcards/ui/review/widgets/flip_card.dart';
 
+import 'fakes/fake_backup_repository.dart';
 import 'fakes/fake_card_repository.dart';
 import 'fakes/fake_deck_repository.dart';
 import 'fakes/fake_media_repository.dart';
@@ -19,6 +20,7 @@ void main() {
   }) => AppDependencies(
     decks: FakeDeckRepository(decks),
     cards: FakeCardRepository(cards),
+    backups: FakeBackupRepository(),
     media: FakeMediaRepository(),
     reminders: FakeReminderRepository(),
   );
