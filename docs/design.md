@@ -43,6 +43,7 @@ As versões foram conferidas no pub.dev em 2026-10-11. O plano de cada etapa adi
 | `archive` | 4.5.1 | Criar e extrair o `.zip` |
 | `flutter_launcher_icons` (dev) | 0.14.4 | Gerar o ícone adaptativo a partir de `logo-f/` |
 | `sqflite_common_ffi` (dev) | 2.4.3 | Rodar o banco nos testes, no computador |
+| `fake_async` (dev) | 1.3.3 | Controlar o tempo nos testes do limite de 60 s da gravação (acrescentado na etapa 5; já vinha com o `flutter_test`) |
 
 O `flutter create` também adiciona o `cupertino_icons`, que é removido na etapa 0 porque o app só usa ícones do Material. O `flutter_lints` (dev) continua, porque o `analysis_options.yaml` depende dele.
 
@@ -466,6 +467,15 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 - **Nome do arquivo:** `aud_<epoch-ms>_<4 caracteres>.m4a`. O ciclo de vida é o mesmo das imagens.
 - **Reprodução:** `audioplayers`, com **um único player para o app inteiro** (`AudioPlayerService`). Por isso, nunca tocam dois áudios ao mesmo tempo. O áudio para ao virar o card, ao trocar de card e ao sair da tela.
 - **Duração:** durante a gravação, o tempo vem de um cronômetro do próprio editor. Para áudios já salvos, vem do player. A duração não é guardada no banco.
+- **Regras decididas na etapa 5 (2026-10-18):**
+  - Enquanto um lado grava, ou enquanto a gravação ainda está terminando de parar, o SALVAR fica desativado, e o ▶ dos dois lados também: tocar um áudio durante a gravação faria o Android pausar a gravação.
+  - Enquanto o card está salvando, Gravar, Regravar e ✕ ficam desativados. Uma gravação que terminaria durante o salvamento é descartada.
+  - Voltar durante a gravação pergunta *"Descartar alterações?"*. Descartar para a gravação e apaga o arquivo.
+  - Se a gravação falhar ao parar, ou parar sem gerar um arquivo, o rascunho é apagado e aparece *"Não foi possível gravar o áudio."* ao tocar em Parar.
+  - A gravação usa `audioInterruption: AudioInterruptionMode.none`: um alarme ou um assistente de voz não pausa a gravação às escondidas (o padrão do `record` pausaria para sempre, com o cronômetro correndo).
+  - Se o app sair da tela enquanto a gravação ainda está começando, ela é parada assim que começa.
+  - Na revisão, ao virar o card, a contagem é feita antes de parar o áudio, para que um toque rápido em Próximo nunca conte o card seguinte.
+  - O áudio usa o foco de áudio padrão do `audioplayers`: tocar um ▶ para a música de outro app, e ela não volta sozinha. Se isso incomodar, dá para trocar pelo foco temporário.
 
 ### Permissões
 

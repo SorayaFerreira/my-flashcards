@@ -475,6 +475,8 @@ git commit -m "feat: escolhe e compartilha o arquivo de backup"
 
 ### Tarefa 3: `BackupRepository`
 
+> **Recomendações da revisão da etapa 5 (2026-10-18):** antes de substituir `media/` numa importação, pare o áudio (`stopPlayback`). No zip, guarde os `.jpg` e `.m4a` sem compressão (`level: ZipFileEncoder.STORE` no `addFileSync`), porque eles já são comprimidos e comprimir de novo só gasta tempo.
+
 > **Recomendação da revisão da etapa 4 (2026-10-16):** um banco importado pode trazer nomes de arquivo inesperados. Antes de apagar ou abrir um arquivo de mídia pelo nome guardado no banco, confira que `p.basename(nome) == nome` (sem `../`). E depois da troca de dados, rode `ensureDirectories()`, porque `commitDrafts` supõe que `media/` existe.
 
 **Arquivos:**

@@ -2240,6 +2240,8 @@ git commit -m "feat: grava e toca áudio no editor e na revisão"
 
 ### Tarefa 5: conferir no celular e fechar a etapa
 
+> **Ajustes feitos na execução (2026-10-18):** os arquivos que as etapas 2 a 4 tinham reforçado receberam o áudio por acréscimo, sem ser substituídos. Depois da revisão final: a contagem na revisão acontece antes de parar o áudio; o ▶ fica desativado durante a gravação; parar sem arquivo ou com falha mostra a mensagem; a gravação ignora interrupções de áudio (`AudioInterruptionMode.none`); o player não fica preso no ■. Veja "Áudio" no [design](../design.md). Os itens novos do checklist conferem isso no celular.
+
 **Arquivos:** nenhum.
 
 - [ ] **Passo 1: rodar no celular**
@@ -2263,6 +2265,10 @@ flutter run
 - [ ] Na revisão, o áudio **não** toca sozinho. O ▶ toca, e virar o card ou trocar de card para o som
 - [ ] Ao reabrir um card salvo no editor, a duração do áudio aparece
 - [ ] Um card só com áudio na frente aparece na lista como *"(só áudio)"*, com o ícone de som
+- [ ] Durante a gravação de um lado, o ▶ do outro lado fica desativado
+- [ ] Ao terminar de tocar um áudio, o botão volta de ■ para ▶ sozinho
+- [ ] Tocar um alarme (ou chamar o assistente) durante a gravação não faz ela parar às escondidas: o tempo e o áudio gravado batem
+- [ ] Voltar durante a gravação pergunta *"Descartar alterações?"*
 - [ ] Apagar um áudio à mão (`adb shell run-as ... rm app_flutter/media/<nome>`) faz aparecer *"Áudio não encontrado"*
 
 - [ ] **Passo 3: juntar ao `main`**
