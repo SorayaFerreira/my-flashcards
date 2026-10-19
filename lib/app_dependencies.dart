@@ -6,11 +6,14 @@ import 'package:sqflite/sqflite.dart';
 import 'data/repositories/card_repository.dart';
 import 'data/repositories/deck_repository.dart';
 import 'data/repositories/media_repository.dart';
+import 'data/repositories/reminder_repository.dart';
 import 'data/services/audio_player_service.dart';
 import 'data/services/audio_recorder_service.dart';
 import 'data/services/database_service.dart';
 import 'data/services/image_picker_service.dart';
 import 'data/services/media_file_service.dart';
+import 'data/services/notification_service.dart';
+import 'utils/result.dart';
 
 /// The repositories shared by the whole app, created once at startup.
 class AppDependencies {
@@ -18,11 +21,13 @@ class AppDependencies {
     required this.decks,
     required this.cards,
     required this.media,
+    required this.reminders,
   });
 
   final DeckRepository decks;
   final CardRepository cards;
   final MediaRepository media;
+  final ReminderRepository reminders;
 
   static Future<AppDependencies> create() async {
     final factory = databaseFactorySqflitePlugin;
@@ -32,6 +37,9 @@ class AppDependencies {
     );
     await database.open();
     final mediaFiles = await MediaFileService.create();
+    final notifications = NotificationService();
+    // Without notifications the rest of the app still works.
+    await guard(notifications.initialize);
     // By default the plugin only uses the Android photo picker on API 36+.
     final picker = ImagePickerPlatform.instance;
     if (picker is ImagePickerAndroid) picker.useAndroidPhotoPicker = true;
@@ -43,6 +51,10 @@ class AppDependencies {
         imagePicker: ImagePickerService(),
         recorder: AudioRecorderService(),
         player: AudioPlayerService(),
+      ),
+      reminders: ReminderRepository(
+        database: database,
+        notifications: notifications,
       ),
     );
   }

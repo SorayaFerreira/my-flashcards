@@ -1477,6 +1477,8 @@ git commit -m "feat: tela de configurações com o lembrete diário"
 
 ### Tarefa 6: conferir no celular e fechar a etapa
 
+> **Ajustes feitos na execução (2026-10-19):** datas lidas de forma estrita (`tryParseDate`); o `NotificationService` não agenda nada se não conseguiu ler o fuso (`_ready`), relê o fuso antes de cada agendamento e pula horários que já passaram; o `main` nunca trava por causa do lembrete; os horários sorteados ficam em `reminder_times` e são reagendados a cada abertura do app; ligar o lembrete volta para desligado se falhar no meio. Veja "Lembrete diário" no [design](../design.md).
+
 **Arquivos:** nenhum.
 
 - [ ] **Passo 1: rodar no celular**
@@ -1504,6 +1506,8 @@ flutter run
 - [ ] Reiniciar o celular mantém os alarmes (confira com o `dumpsys`)
 - [ ] Desligar o lembrete faz os alarmes do app sumirem do `dumpsys`
 - [ ] Abrir e fechar o app várias vezes no mesmo dia não muda os horários já agendados
+- [ ] **Alarmes perdidos voltam:** em Configurações › Apps › My Flashcards, toque em **Forçar parada**. O `dumpsys` não mostra mais alarmes do app. Abra o app e confira de novo: os alarmes voltaram, **com os mesmos horários** de antes
+- [ ] Com o editor de um card aberto e a **câmera** aberta por ele, chegue (ou toque) uma notificação do lembrete e volte: o editor e a foto em andamento continuam lá
 
 - [ ] **Passo 3: juntar ao `main`**
 

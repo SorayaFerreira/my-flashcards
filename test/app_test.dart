@@ -10,6 +10,7 @@ import 'package:my_flashcards/ui/review/widgets/flip_card.dart';
 import 'fakes/fake_card_repository.dart';
 import 'fakes/fake_deck_repository.dart';
 import 'fakes/fake_media_repository.dart';
+import 'fakes/fake_reminder_repository.dart';
 
 void main() {
   AppDependencies dependencies({
@@ -19,6 +20,7 @@ void main() {
     decks: FakeDeckRepository(decks),
     cards: FakeCardRepository(cards),
     media: FakeMediaRepository(),
+    reminders: FakeReminderRepository(),
   );
 
   testWidgets('abre na lista de decks, seguindo o tema do sistema', (
@@ -98,5 +100,15 @@ void main() {
 
     expect(find.text('to give up'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
+  });
+
+  testWidgets('⚙ abre as configurações', (tester) async {
+    await tester.pumpWidget(App(dependencies: dependencies()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Configurações'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lembrete diário'), findsOneWidget);
   });
 }

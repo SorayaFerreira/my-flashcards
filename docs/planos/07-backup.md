@@ -1172,6 +1172,8 @@ git commit -m "feat: cria o BackupRepository com validação e rollback"
 
 ### Tarefa 4: backup no `SettingsViewModel`
 
+> **Ajustes da etapa 6 que esta tarefa precisa manter (2026-10-19):** o `SettingsViewModel` atual tem `with DisposeSafeNotifier`, o parâmetro nomeado privado `required this._reminderRepository`, a proteção contra toque duplo (`isBusy`), o `_isBusy` zerado num `finally` e o `_syncStoredState` (relê o lembrete depois de um erro). **Acrescente o backup ao arquivo atual, sem substituí-lo.** O `resetAfterImport` também limpa `reminder_times`. Se ele desligar o lembrete por falta de permissão, vale avisar a usuária com uma mensagem.
+
 **Arquivos:**
 - Modificar: `lib/ui/settings/view_models/settings_view_model.dart` e `lib/routes.dart`
 - Testar: modificar `test/ui/settings/settings_view_model_test.dart` e `test/ui/settings/settings_screen_test.dart`

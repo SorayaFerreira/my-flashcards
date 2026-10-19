@@ -7,6 +7,8 @@ import 'ui/deck_detail/view_models/deck_detail_view_model.dart';
 import 'ui/deck_detail/widgets/deck_detail_screen.dart';
 import 'ui/review/view_models/review_view_model.dart';
 import 'ui/review/widgets/review_screen.dart';
+import 'ui/settings/view_models/settings_view_model.dart';
+import 'ui/settings/widgets/settings_screen.dart';
 
 /// Builds every route of the app. Each ViewModel is created here, once per
 /// route, and handed to its screen, which disposes it.
@@ -41,6 +43,15 @@ class AppRoutes {
     );
     return MaterialPageRoute(
       builder: (_) => ReviewScreen(deckName: deckName, viewModel: viewModel),
+    );
+  }
+
+  Route<void> settings() {
+    final viewModel = SettingsViewModel(
+      reminderRepository: _dependencies.reminders,
+    );
+    return MaterialPageRoute(
+      builder: (_) => SettingsScreen(viewModel: viewModel),
     );
   }
 
