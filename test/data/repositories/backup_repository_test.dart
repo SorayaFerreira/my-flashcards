@@ -113,17 +113,66 @@ void main() {
     return zipPath;
   }
 
-  String manifestJson({String app = 'my_flashcards', int schemaVersion = 1}) =>
-      jsonEncode(
-        BackupManifest(
-          app: app,
-          formatVersion: 1,
-          schemaVersion: schemaVersion,
-          exportedAt: DateTime(2026),
-          decks: 0,
-          cards: 0,
-        ).toJson(),
-      );
+  String manifestJson({
+    String app = 'my_flashcards',
+    int formatVersion = 1,
+    int schemaVersion = 1,
+  }) => jsonEncode(
+    BackupManifest(
+      app: app,
+      formatVersion: formatVersion,
+      schemaVersion: schemaVersion,
+      exportedAt: DateTime(2026),
+      decks: 0,
+      cards: 0,
+    ).toJson(),
+  );
+
+  var builtCount = 0;
+
+  /// A real, valid database file with one deck and one card.
+  Future<String> makeDb([Map<String, Object?> card = const {}]) async {
+    final path = p.join(root.path, 'valido_${builtCount++}.db');
+    final built = DatabaseService(factory: databaseFactoryFfi, path: path);
+    await built.open();
+    await built.db.execute('PRAGMA user_version = 1');
+    final deckId = await built.db.insert('decks', {
+      'name': 'x',
+      'created_at': 0,
+    });
+    await built.db.insert('cards', {
+      'deck_id': deckId,
+      'created_at': 0,
+      ...card,
+    });
+    await built.close();
+    return path;
+  }
+
+  /// A zip whose only possible defect is what the test changes: it has a
+  /// valid database and manifest unless told otherwise.
+  Future<String> zipOf({
+    String? manifest,
+    Map<String, Object?> card = const {},
+    Map<String, String> extra = const {},
+  }) async {
+    final id = builtCount++;
+    final manifestFile = File(p.join(root.path, 'manifesto_$id.json'));
+    await manifestFile.writeAsString(manifest ?? manifestJson());
+    final zipPath = p.join(root.path, 'montado_$id.zip');
+    final entries = <String, String>{};
+    for (final MapEntry(key: name, value: content) in extra.entries) {
+      final source = File(p.join(root.path, 'extra_${id}_${entries.length}'));
+      await source.writeAsString(content);
+      entries[name] = source.path;
+    }
+    await zip.createZip(zipPath, {
+      'manifest.json': manifestFile.path,
+      'flashcards.db': await makeDb(card),
+      ...entries,
+    });
+    return zipPath;
+  }
 
   Directory rollbackRoot() =>
       Directory(p.join(root.path, 'support', 'backup_rollback'));
@@ -250,10 +299,8 @@ void main() {
   });
 
   test('recusa um zip de outro app', () async {
-    final zipPath = await handMadeZip({
-      'manifest.json': manifestJson(app: 'outro_app'),
-      'flashcards.db': 'x',
-    });
+    expect(okValue(await repository.prepareImport(await zipOf())), isNotNull);
+    final zipPath = await zipOf(manifest: manifestJson(app: 'outro_app'));
 
     expect(
       await repository.prepareImport(zipPath),
@@ -262,10 +309,7 @@ void main() {
   });
 
   test('recusa um backup de uma versão mais nova do app', () async {
-    final zipPath = await handMadeZip({
-      'manifest.json': manifestJson(schemaVersion: 99),
-      'flashcards.db': 'x',
-    });
+    final zipPath = await zipOf(manifest: manifestJson(schemaVersion: 99));
 
     expect(
       await repository.prepareImport(zipPath),
@@ -402,47 +446,26 @@ void main() {
     expect(await old.exists(), isTrue);
   });
 
-  test('recusa um backup cujo banco aponta para mídia fora da pasta', () async {
-    for (final name in [
-      '../fora.jpg',
-      'a/b.jpg',
-      r'a\b.jpg',
-      '..',
-      '.oculto',
-    ]) {
-      final dbPath = p.join(root.path, 'ruim.db');
-      final bad = DatabaseService(factory: databaseFactoryFfi, path: dbPath);
-      await bad.open();
-      await bad.db.execute('PRAGMA user_version = 1');
-      final deckId = await bad.db.insert('decks', {
-        'name': 'x',
-        'created_at': 0,
-      });
-      final audio = name.startsWith('AUDIO:');
-      await bad.db.insert('cards', {
-        'deck_id': deckId,
-        (audio ? 'back_audio' : 'front_image'): audio
-            ? name.substring(6)
-            : name,
-        'created_at': 0,
-      });
-      await bad.close();
-      final zipPath = p.join(root.path, 'ruim.zip');
-      final manifest = File(p.join(root.path, 'manifest_ruim.json'))
-        ..writeAsStringSync(manifestJson());
-      await zip.createZip(zipPath, {
-        'manifest.json': manifest.path,
-        'flashcards.db': dbPath,
-      });
+  test('recusa um banco cujas colunas de mídia têm nomes perigosos', () async {
+    const names = ['../fora.jpg', 'a/b.jpg', r'a\b.jpg', '..', '.oculto'];
+    final cases = [
+      for (final name in names) ('front_image', name),
+      for (final column in ['front_audio', 'back_image', 'back_audio'])
+        (column, '../x.m4a'),
+    ];
+    okValue(
+      await repository.prepareImport(
+        await zipOf(card: {'back_audio': 'ok.m4a'}),
+      ),
+    );
+    for (final (column, name) in cases) {
+      final zipPath = await zipOf(card: {column: name});
 
       expect(
         await repository.prepareImport(zipPath),
         isA<Error<BackupManifest>>(),
-        reason: name,
+        reason: '$column = $name',
       );
-
-      await File(dbPath).delete();
-      await File(zipPath).delete();
     }
   });
 
@@ -472,12 +495,15 @@ void main() {
   });
 
   test('recusa entradas media, media/., media/.. e aninhadas', () async {
+    // Control: the same zip with a plain media file is accepted, so the bad
+    // entry is the only defect in the cases below.
+    okValue(
+      await repository.prepareImport(
+        await zipOf(extra: {'media/ok.jpg': 'foto'}),
+      ),
+    );
     for (final entry in ['media', 'media/.', 'media/..', 'media/a/b.jpg']) {
-      final zipPath = await handMadeZip({
-        'manifest.json': manifestJson(),
-        'flashcards.db': 'x',
-        entry: 'x',
-      });
+      final zipPath = await zipOf(extra: {entry: 'x'});
 
       expect(
         await repository.prepareImport(zipPath),
@@ -541,20 +567,7 @@ void main() {
   });
 
   test('recusa outro formatVersion', () async {
-    final manifest = jsonEncode(
-      BackupManifest(
-        app: 'my_flashcards',
-        formatVersion: 2,
-        schemaVersion: 1,
-        exportedAt: DateTime(2026),
-        decks: 0,
-        cards: 0,
-      ).toJson(),
-    );
-    final zipPath = await handMadeZip({
-      'manifest.json': manifest,
-      'flashcards.db': 'x',
-    });
+    final zipPath = await zipOf(manifest: manifestJson(formatVersion: 2));
 
     expect(
       await repository.prepareImport(zipPath),
@@ -607,4 +620,42 @@ void main() {
       isA<Error<BackupManifest>>(),
     );
   });
+
+  test(
+    'se o banco original não volta, o sidecar dele fica no rollback',
+    () async {
+      await seedDeck('Backup', image: 'img_backup.jpg');
+      final zipPath = okValue(await repository.exportBackup());
+      await database.db.delete('decks');
+      await mediaFiles.mediaFile('img_backup.jpg').delete();
+      await seedDeck('Atual', image: 'img_atual.jpg');
+      await File('${dbPath()}-shm').writeAsString('sidecar do original');
+      var first = true;
+      await setUpWith(
+        database,
+        move: (from, to) async {
+          final placingMedia =
+              to == mediaFiles.mediaDir.path && from.contains('import');
+          final restoringDb = to == dbPath() && from.contains('rollback');
+          if ((placingMedia && first) || restoringDb) {
+            first = false;
+            throw const FileSystemException('falha simulada');
+          }
+          if (await FileSystemEntity.isDirectory(from)) {
+            await Directory(from).rename(to);
+          } else {
+            await File(from).rename(to);
+          }
+        },
+      );
+      okValue(await repository.prepareImport(zipPath));
+
+      expect(await repository.applyImport(), isA<Error<void>>());
+
+      final kept = rollbackRoot().listSync().single as Directory;
+      expect(File(p.join(kept.path, 'flashcards.db')).existsSync(), isTrue);
+      expect(File(p.join(kept.path, 'flashcards.db-shm')).existsSync(), isTrue);
+      expect(File('${dbPath()}-shm').existsSync(), isFalse);
+    },
+  );
 }

@@ -212,12 +212,14 @@ class BackupRepository {
     List<(String, String)> placed,
   ) async {
     var clean = true;
-    Future<void> step(Future<void> Function() action) async {
+    Future<bool> step(Future<void> Function() action) async {
       try {
         await action();
+        return true;
       } catch (error) {
         clean = false;
         debugPrint('Não foi possível restaurar os dados: $error');
+        return false;
       }
     }
 
@@ -227,12 +229,44 @@ class BackupRepository {
     }
     // The originals' sidecars were all moved before the imported database was
     // placed, so any sidecar at the live path now belongs to the imported one.
+    var importedSidecarsGone = true;
     if (placed.any((item) => item.$2 == _database.path)) {
       for (final suffix in _dbSuffixes.skip(1)) {
-        await step(() => _deleteIfExists('${_database.path}$suffix'));
+        importedSidecarsGone &= await step(
+          () => _deleteIfExists('${_database.path}$suffix'),
+        );
       }
     }
+    // Media first, then the database: its main file must be back (and no
+    // imported sidecar left beside it) before its own sidecars return.
+    // Otherwise they stay in the rollback folder, which is then kept.
+    var databaseBack = importedSidecarsGone;
     for (final (live, aside) in moved.reversed) {
+      final isSidecar = _dbSuffixes
+          .skip(1)
+          .any((suffix) => live == '${_database.path}$suffix');
+      final isMain = live == _database.path;
+      if (isSidecar) continue;
+      if (isMain && !importedSidecarsGone) {
+        clean = false;
+        debugPrint(
+          'Banco original mantido no rollback: sobrou sidecar importado.',
+        );
+        continue;
+      }
+      final ok = await step(() => _move(aside, live));
+      if (isMain) databaseBack = ok;
+    }
+    for (final (live, aside) in moved.reversed) {
+      final isSidecar = _dbSuffixes
+          .skip(1)
+          .any((suffix) => live == '${_database.path}$suffix');
+      if (!isSidecar) continue;
+      if (!databaseBack) {
+        clean = false;
+        debugPrint('Sidecar mantido no rollback: $aside');
+        continue;
+      }
       await step(() => _move(aside, live));
     }
     await step(_mediaFiles.ensureDirectories);
