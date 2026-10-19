@@ -4,26 +4,48 @@ import 'package:my_flashcards/app_version.dart';
 import 'package:my_flashcards/ui/settings/view_models/settings_view_model.dart';
 import 'package:my_flashcards/ui/settings/widgets/settings_screen.dart';
 
+import '../../fakes/fake_backup_repository.dart';
 import '../../fakes/fake_reminder_repository.dart';
 
 void main() {
   late FakeReminderRepository reminders;
+  late FakeBackupRepository backups;
 
   Future<void> pumpScreen(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: SettingsScreen(
-          viewModel: SettingsViewModel(reminderRepository: reminders),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SettingsScreen(
+                      viewModel: SettingsViewModel(
+                        reminderRepository: reminders,
+                        backupRepository: backups,
+                      ),
+                    ),
+                  ),
+                ),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
         ),
       ),
     );
+    await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
   }
 
   bool switchValue(WidgetTester tester) =>
       tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value;
 
-  setUp(() => reminders = FakeReminderRepository());
+  setUp(() {
+    reminders = FakeReminderRepository();
+    backups = FakeBackupRepository();
+  });
 
   testWidgets('mostra o lembrete desligado, a explicação e a versão', (
     tester,

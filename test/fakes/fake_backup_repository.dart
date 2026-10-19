@@ -20,9 +20,11 @@ class FakeBackupRepository implements BackupRepository {
   var applyCalls = 0;
   var cancelCalls = 0;
   var cleanCalls = 0;
+  var exportCalls = 0;
 
   @override
   Future<Result<String>> exportBackup() async {
+    exportCalls++;
     final error = exportError;
     if (error != null) return Result.error(error);
     return const Result.ok('/tmp/my-flashcards-backup-2026-10-12.zip');
