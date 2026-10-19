@@ -354,4 +354,79 @@ void main() {
 
     expect(find.text('Imagem não encontrada'), findsOneWidget);
   });
+
+  testWidgets('Gravar e Parar põem o áudio no lado', (tester) async {
+    await openEditor(tester);
+
+    await tester.tap(find.text('Gravar').first);
+    await tester.pump();
+    expect(find.text('Parar'), findsOneWidget);
+    expect(saveButton(tester).onPressed, isNull);
+
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('0:03'), findsOneWidget);
+
+    await tester.tap(find.text('Parar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Regravar'), findsOneWidget);
+    expect(find.text('0:03'), findsOneWidget);
+  });
+
+  testWidgets('microfone negado mostra a mensagem', (tester) async {
+    media.microphoneAllowed = false;
+    await openEditor(tester);
+
+    await tester.tap(find.text('Gravar').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Sem acesso ao microfone. Ative em Configurações › Apps › '
+        'My Flashcards › Permissões.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a gravação para quando o app sai da tela', (tester) async {
+    await openEditor(tester);
+    await tester.tap(find.text('Gravar').first);
+    await tester.pump();
+
+    // Real lifecycle order: resumed > inactive > hidden > inactive > resumed.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Parar'), findsNothing);
+    expect(find.text('Regravar'), findsOneWidget);
+  });
+
+  testWidgets('enquanto salva, Gravar fica desativado', (tester) async {
+    media.nextPick = 'img_1.jpg';
+    await openEditor(tester);
+    await tester.tap(find.text('Câmera').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(textField(1), 'desistir');
+    await tester.pump();
+    media.commitGate = Completer();
+
+    await tester.tap(find.text('SALVAR'));
+    await tester.pump();
+
+    final buttons = tester.widgetList<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Gravar'),
+    );
+    expect(buttons, isNotEmpty);
+    for (final button in buttons) {
+      expect(button.onPressed, isNull);
+    }
+
+    media.commitGate!.complete();
+    await tester.pumpAndSettle();
+  });
 }

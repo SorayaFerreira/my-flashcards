@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/models/card_side.dart';
 import '../../../domain/models/image_origin.dart';
 import '../view_models/card_editor_view_model.dart';
+import 'audio_recorder_field.dart';
 import 'side_editor.dart';
 
 class CardEditorScreen extends StatefulWidget {
@@ -17,12 +18,15 @@ class CardEditorScreen extends StatefulWidget {
 class _CardEditorScreenState extends State<CardEditorScreen> {
   final _frontText = TextEditingController();
   final _backText = TextEditingController();
+  late final AppLifecycleListener _lifecycle;
 
   CardEditorViewModel get _viewModel => widget.viewModel;
 
   @override
   void initState() {
     super.initState();
+    // A recording must not go on while the app is out of sight.
+    _lifecycle = AppLifecycleListener(onHide: _viewModel.stopRecording);
     _load();
   }
 
@@ -35,6 +39,7 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _frontText.dispose();
     _backText.dispose();
     _viewModel.dispose();
@@ -108,7 +113,10 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) => PopScope<bool>(
-        canPop: !_viewModel.hasChanges && !_viewModel.isSaving,
+        canPop:
+            !_viewModel.hasChanges &&
+            !_viewModel.isSaving &&
+            !_viewModel.isRecording,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop && !_viewModel.isSaving) _confirmDiscard();
         },
@@ -166,10 +174,31 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
       onTakePhoto: () => _pickImage(side, ImageOrigin.camera),
       onPickFromGallery: () => _pickImage(side, ImageOrigin.gallery),
       onRemoveImage: () => _viewModel.removeImage(side),
+      audioField: AudioRecorderField(
+        isRecording: _viewModel.recordingSide == side,
+        recordingElapsed: _viewModel.recordingElapsed,
+        audioPath: _viewModel.audioPath(side),
+        duration: _viewModel.audioDuration(side),
+        isPlaying: _viewModel.isPlaying(side),
+        canRecord: !_viewModel.isRecording && !_viewModel.isSaving,
+        enabled: !_viewModel.isSaving,
+        onRecord: () => _startRecording(side),
+        onStop: _viewModel.stopRecording,
+        onTogglePlay: () => _togglePlay(side),
+        onRemove: () => _viewModel.removeAudio(side),
+      ),
     );
   }
 
   Future<void> _pickImage(Side side, ImageOrigin origin) async {
     if (!await _viewModel.pickImage(side, origin)) _showActionError();
+  }
+
+  Future<void> _startRecording(Side side) async {
+    if (!await _viewModel.startRecording(side)) _showActionError();
+  }
+
+  Future<void> _togglePlay(Side side) async {
+    if (!await _viewModel.togglePlay(side)) _showActionError();
   }
 }

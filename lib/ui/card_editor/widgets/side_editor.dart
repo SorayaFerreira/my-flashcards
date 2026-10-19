@@ -13,6 +13,7 @@ class SideEditor extends StatelessWidget {
     required this.onTakePhoto,
     required this.onPickFromGallery,
     required this.onRemoveImage,
+    required this.audioField,
     this.autofocus = false,
     this.mediaEnabled = true,
   });
@@ -25,6 +26,7 @@ class SideEditor extends StatelessWidget {
   final VoidCallback onTakePhoto;
   final VoidCallback onPickFromGallery;
   final VoidCallback onRemoveImage;
+  final Widget audioField;
   final bool autofocus;
   final bool mediaEnabled;
 
@@ -86,6 +88,8 @@ class SideEditor extends StatelessWidget {
               ),
             ],
           ),
+        const SizedBox(height: 8),
+        audioField,
         if (isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
