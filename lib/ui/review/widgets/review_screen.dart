@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../domain/models/card_side.dart';
@@ -40,9 +42,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<void> _onFlip(bool showingBack) async {
     if (!_hasFlipped) setState(() => _hasFlipped = true);
-    await _viewModel.stopAudio();
-    if (!showingBack) return;
-    if (!await _viewModel.markBackSeen() && mounted) {
+    // Count first: nothing may await before the card is read, or a quick
+    // "Próximo" would make this count the next card.
+    final counted = showingBack ? _viewModel.markBackSeen() : null;
+    unawaited(_viewModel.stopAudio());
+    if (counted != null && !await counted && mounted) {
       _showMessage(ReviewViewModel.countErrorMessage);
     }
   }

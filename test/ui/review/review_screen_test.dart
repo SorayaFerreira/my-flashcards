@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -195,5 +196,23 @@ void main() {
     await flip(tester);
 
     expect(media.playingPath.value, isNull);
+  });
+
+  testWidgets('Próximo logo após virar conta o card virado', (tester) async {
+    await pumpScreen(tester, [card(1, 0), card(2, 3)]);
+    media.stopPlaybackGate = Completer();
+
+    await tester.fling(find.byType(FlipCard), const Offset(200, 0), 1500);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Verso'), findsOneWidget);
+    await tester.tap(find.text('Próximo ›'));
+    await tester.pump();
+    media.stopPlaybackGate!.complete();
+    await tester.pumpAndSettle();
+
+    expect(cards.cards.first.reviewCount, 1);
+    expect(cards.cards.last.reviewCount, 3);
+    expect(find.text('2 / 2'), findsOneWidget);
   });
 }

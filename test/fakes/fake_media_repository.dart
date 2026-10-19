@@ -29,6 +29,12 @@ class FakeMediaRepository implements MediaRepository {
   /// When set, [stopRecording] waits for it before answering.
   Completer<void>? stopGate;
 
+  /// When set, [stopPlayback] waits for it before answering.
+  Completer<void>? stopPlaybackGate;
+
+  /// When set, [play] waits for it before answering.
+  Completer<void>? playGate;
+
   final picks = <ImageOrigin>[];
   final committed = <String>[];
   final reverted = <String>[];
@@ -108,6 +114,7 @@ class FakeMediaRepository implements MediaRepository {
 
   @override
   Future<Result<void>> play(String path) async {
+    await playGate?.future;
     final error = playError;
     if (error != null) return Result.error(error);
     played.add(path);
@@ -116,7 +123,10 @@ class FakeMediaRepository implements MediaRepository {
   }
 
   @override
-  Future<void> stopPlayback() async => _playingPath.value = null;
+  Future<void> stopPlayback() async {
+    await stopPlaybackGate?.future;
+    _playingPath.value = null;
+  }
 
   @override
   ValueListenable<String?> get playingPath => _playingPath;
