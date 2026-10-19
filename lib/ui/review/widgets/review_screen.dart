@@ -167,15 +167,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 : null,
           ),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextButton(
-                onPressed: _viewModel.isFirst ? null : _viewModel.previous,
-                child: const Text('‹ Anterior'),
+              Flexible(
+                child: TextButton(
+                  onPressed: _viewModel.isFirst ? null : _viewModel.previous,
+                  child: const Text('‹ Anterior'),
+                ),
               ),
-              const Spacer(),
-              FilledButton(
-                onPressed: _viewModel.next,
-                child: Text(_viewModel.isLast ? 'Concluir' : 'Próximo ›'),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FilledButton(
+                  onPressed: _viewModel.next,
+                  child: Text(_viewModel.isLast ? 'Concluir' : 'Próximo ›'),
+                ),
               ),
             ],
           ),
@@ -202,7 +207,7 @@ class _FinishedView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cards = total == 1 ? 'card' : 'cards';
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
