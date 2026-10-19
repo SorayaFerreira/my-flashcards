@@ -29,3 +29,23 @@ DateTime parseDate(String text) {
   if (date == null) throw FormatException('Data inválida', text);
   return date;
 }
+
+/// `AAAA-MM-DDTHH:MM`, a local time without seconds or zone.
+String formatDateTime(DateTime time) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${formatDate(time)}T${two(time.hour)}:${two(time.minute)}';
+}
+
+final _dateTimePattern = RegExp(r'^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$');
+
+/// Parses `AAAA-MM-DDTHH:MM` into a local time. Returns null for any other
+/// text or an impossible date or time.
+DateTime? tryParseDateTime(String text) {
+  final match = _dateTimePattern.firstMatch(text);
+  if (match == null) return null;
+  final day = tryParseDate(match[1]!);
+  final hour = int.parse(match[2]!);
+  final minute = int.parse(match[3]!);
+  if (day == null || hour > 23 || minute > 59) return null;
+  return DateTime(day.year, day.month, day.day, hour, minute);
+}

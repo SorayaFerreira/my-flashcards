@@ -13,4 +13,18 @@ void main() {
   test('parseDate lança FormatException para texto inválido', () {
     expect(() => parseDate('lixo'), throwsFormatException);
   });
+
+  test('formatDateTime e tryParseDateTime fazem o caminho de ida e volta', () {
+    final time = DateTime(2026, 10, 12, 9, 5);
+
+    expect(formatDateTime(time), '2026-10-12T09:05');
+    expect(tryParseDateTime('2026-10-12T09:05'), time);
+  });
+
+  test('tryParseDateTime recusa texto inválido', () {
+    expect(tryParseDateTime('2026-10-12'), isNull);
+    expect(tryParseDateTime('2026-10-12T24:00'), isNull);
+    expect(tryParseDateTime('2026-10-12T10:60'), isNull);
+    expect(tryParseDateTime('2026-02-31T10:00'), isNull);
+  });
 }
