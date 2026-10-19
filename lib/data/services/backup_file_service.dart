@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -25,6 +26,13 @@ class BackupFileService {
       } catch (_) {}
       if (await destination.exists()) await destination.delete();
       rethrow;
+    } finally {
+      // The picker's own cache copy is no longer needed.
+      try {
+        await FilePicker.clearTemporaryFiles();
+      } catch (error) {
+        debugPrint('Não foi possível limpar o cache do seletor: $error');
+      }
     }
     return true;
   }

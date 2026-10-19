@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/ui/settings/view_models/settings_view_model.dart';
 import 'package:my_flashcards/utils/result.dart';
@@ -18,6 +20,11 @@ class _EnableFailsAfterSaving extends FakeReminderRepository {
 class _EnableThrows extends FakeReminderRepository {
   @override
   Future<Result<bool>> enable() async => throw StateError('bug');
+}
+
+class _ResetThrows extends FakeReminderRepository {
+  @override
+  Future<Result<void>> resetAfterImport() async => throw StateError('bug');
 }
 
 void main() {
@@ -163,6 +170,23 @@ void main() {
 
       expect(await viewModel.pickAndPrepareImport(), isNull);
       expect(viewModel.message, SettingsViewModel.invalidBackupMessage);
+    });
+
+    test('arquivo ilegível mostra a mensagem de abrir o arquivo', () async {
+      backups.prepareError = const FileSystemException('sem espaço');
+
+      expect(await viewModel.pickAndPrepareImport(), isNull);
+      expect(viewModel.message, SettingsViewModel.openFileErrorMessage);
+    });
+
+    test('erro ao recomeçar o lembrete não desfaz a importação', () async {
+      final throwing = SettingsViewModel(
+        reminderRepository: _ResetThrows(),
+        backupRepository: backups,
+      );
+
+      expect(await throwing.confirmImport(), isTrue);
+      expect(throwing.isBusy, isFalse);
     });
 
     test('confirmar troca os dados e recomeça o lembrete', () async {

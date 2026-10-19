@@ -119,6 +119,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
+    if (!mounted) {
+      await _viewModel.cancelImport();
+      return;
+    }
+
     final ok = await _withProgress('Importando…', _viewModel.confirmImport);
     if (!mounted) return;
     if (!ok) {

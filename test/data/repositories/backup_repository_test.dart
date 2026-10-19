@@ -280,22 +280,63 @@ void main() {
     );
   });
 
-  test('recusa um zip que tenta escrever fora da pasta', () async {
-    final zipPath = await handMadeZip({
-      'manifest.json': manifestJson(),
-      'flashcards.db': 'x',
-      '../fora.txt': 'ataque',
-    });
+  test('recusa entradas fora do que o app grava', () async {
+    for (final name in ['../fora.txt', '/abs.txt', 'outro.txt']) {
+      final zipPath = await zipOf(extra: {name: 'ataque'});
 
-    expect(
-      await repository.prepareImport(zipPath),
-      isA<Error<BackupManifest>>(),
-    );
+      expect(
+        await repository.prepareImport(zipPath),
+        isA<Error<BackupManifest>>(),
+        reason: name,
+      );
+    }
     expect(
       await File(p.join(root.path, 'backup', 'fora.txt')).exists(),
       isFalse,
     );
     expect(await File(p.join(root.path, 'fora.txt')).exists(), isFalse);
+    expect(await File('/abs.txt').exists(), isFalse);
+  });
+
+  test('applyImport sem prepareImport recusa e não move nada', () async {
+    var moves = 0;
+    await setUpWith(
+      DatabaseService(
+        factory: databaseFactoryFfi,
+        path: p.join(root.path, 'db2', DatabaseService.fileName),
+      ),
+      move: (from, to) async => moves++,
+    );
+    final importDir = Directory(p.join(root.path, 'backup', 'import'));
+    await importDir.create(recursive: true);
+    await File(p.join(importDir.path, 'manifest.json'))
+        .writeAsString(manifestJson());
+    await File(p.join(importDir.path, 'flashcards.db'))
+        .writeAsBytes(await File(await makeDb()).readAsBytes());
+
+    expect(await repository.applyImport(), isA<Error<void>>());
+    expect(moves, 0);
+  });
+
+  test('apagar a cópia do arquivo escolhido depois de importar', () async {
+    final zipPath = okValue(await repository.exportBackup());
+    files.nextPick = zipPath;
+    final copy = okValue(await repository.pickBackupFile())!;
+    expect(await File(copy).exists(), isTrue);
+
+    okValue(await repository.prepareImport(copy));
+    okValue(await repository.applyImport());
+
+    expect(await File(copy).exists(), isFalse);
+  });
+
+  test('o backup aceita um .nomedia na pasta de mídia', () async {
+    await mediaFiles.mediaFile('.nomedia').writeAsString('');
+    await seedDeck('Inglês', image: 'img_1.jpg');
+
+    final zipPath = okValue(await repository.exportBackup());
+
+    okValue(await repository.prepareImport(zipPath));
   });
 
   test('recusa um zip de outro app', () async {

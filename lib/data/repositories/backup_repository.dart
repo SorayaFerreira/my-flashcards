@@ -68,7 +68,9 @@ class BackupRepository {
       final manifestPath = p.join(exportDir.path, _manifestName);
       await File(manifestPath).writeAsString(jsonEncode(manifest.toJson()));
       final media = await _mediaFiles.mediaDir.exists()
-          ? _mediaFiles.mediaDir.listSync().whereType<File>()
+          ? _mediaFiles.mediaDir.listSync().whereType<File>().where(
+              (file) => MediaFileService.isPlainFileName(p.basename(file.path)),
+            )
           : const <File>[];
       await _zip.createZip(zipPath, {
         _manifestName: manifestPath,
@@ -154,6 +156,14 @@ class BackupRepository {
   /// what was journaled is undone, in reverse order, so a live path this
   /// import did not fill is never deleted.
   Future<Result<void>> applyImport() => guard(() async {
+    try {
+      await _applyPrepared();
+    } finally {
+      await _deleteSource();
+    }
+  });
+
+  Future<void> _applyPrepared() async {
     if (!_prepared) throw const FormatException('Nenhum backup preparado.');
     _prepared = false;
     final rollbackDir = await _newRollbackDir();
@@ -199,7 +209,16 @@ class BackupRepository {
     // effort, and cleanOldExports retries import/ on the next start.
     await _deleteTree(rollbackDir);
     await _deleteTree(_importDir);
-  });
+  }
+
+  /// The local copy of the chosen backup; best effort.
+  Future<void> _deleteSource() async {
+    try {
+      await _deleteIfExists(p.join(_workDir.path, 'import_source.zip'));
+    } on FileSystemException catch (error) {
+      debugPrint('Não foi possível apagar a cópia do backup: $error');
+    }
+  }
 
   static const _dbSuffixes = ['', '-wal', '-shm', '-journal'];
 
@@ -277,6 +296,7 @@ class BackupRepository {
   Future<void> cancelImport() async {
     _prepared = false;
     await _deleteTree(_importDir);
+    await _deleteSource();
   }
 
   /// Deletes the .zip files of earlier exports and leftover work folders.

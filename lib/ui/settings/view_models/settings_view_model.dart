@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/backup_repository.dart';
@@ -120,8 +122,11 @@ class SettingsViewModel extends ChangeNotifier with DisposeSafeNotifier {
           switch (await _backupRepository.prepareImport(zipPath)) {
             case Ok(:final value):
               manifest = value;
-            case Error():
-              _message = invalidBackupMessage;
+            case Error(:final error):
+              // Out of space or an unreadable file is not a bad backup.
+              _message = error is FileSystemException
+                  ? openFileErrorMessage
+                  : invalidBackupMessage;
           }
         case Ok():
           break;
@@ -145,14 +150,20 @@ class SettingsViewModel extends ChangeNotifier with DisposeSafeNotifier {
         _message = importErrorMessage;
       } else {
         // The database was just swapped, so this is the imported setting.
-        final wasEnabled = switch (await _reminderRepository.isEnabled()) {
-          Ok(:final value) => value,
-          Error() => false,
-        };
-        await _reminderRepository.resetAfterImport();
-        await _syncStoredState();
-        if (wasEnabled && !_reminderEnabled) {
-          _notice = reminderOffAfterImportNotice;
+        // The data was already replaced, so a failure here is not a failed
+        // import.
+        try {
+          final wasEnabled = switch (await _reminderRepository.isEnabled()) {
+            Ok(:final value) => value,
+            Error() => false,
+          };
+          await _reminderRepository.resetAfterImport();
+          await _syncStoredState();
+          if (wasEnabled && !_reminderEnabled) {
+            _notice = reminderOffAfterImportNotice;
+          }
+        } catch (error, stackTrace) {
+          debugPrint('$error\n$stackTrace');
         }
       }
     } finally {
