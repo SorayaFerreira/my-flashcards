@@ -44,9 +44,11 @@ class NotificationService {
     if (!_ready) throw const NotificationsUnavailableException();
   }
 
+  /// Throws, leaving the service unavailable, if the device time zone can't
+  /// be read at startup: scheduling then would use UTC.
   Future<void> initialize() async {
     tzdata.initializeTimeZones();
-    await refreshTimeZone();
+    await _applyDeviceTimeZone();
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('ic_notification'),
@@ -55,12 +57,18 @@ class NotificationService {
     _ready = true;
   }
 
+  /// Sets [tz.local] to the device zone. Throws if the zone can't be read or
+  /// isn't in the bundled database.
+  Future<void> _applyDeviceTimeZone() async {
+    final local = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(local.identifier));
+  }
+
   /// Re-reads the device time zone, which may have changed while the app was
   /// alive. If it can't be read, [tz.local] stays as it is.
   Future<void> refreshTimeZone() async {
     try {
-      final local = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(local.identifier));
+      await _applyDeviceTimeZone();
     } on Object catch (error) {
       debugPrint('Could not refresh the time zone: $error');
     }

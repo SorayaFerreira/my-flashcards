@@ -69,6 +69,23 @@ void main() {
       expect(pluginCalls.last.method, 'cancelAll');
     });
 
+    test('fuso fora do latest_10y deixa o serviço recusando tudo', () async {
+      zone = 'Asia/Calcutta';
+      final service = NotificationService();
+
+      await expectLater(service.initialize(), throwsA(anything));
+
+      await expectLater(
+        service.schedule(id: 1, at: DateTime(2099, 1, 1, 10)),
+        throwsA(isA<NotificationsUnavailableException>()),
+      );
+      await expectLater(
+        service.requestPermission(),
+        throwsA(isA<NotificationsUnavailableException>()),
+      );
+      expect(scheduleCalls(), isEmpty);
+    });
+
     test('horário que já passou não chega ao plugin', () async {
       final service = await initialized();
 

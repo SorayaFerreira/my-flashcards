@@ -128,8 +128,10 @@ class ReminderRepository {
       times[reminder.id] = reminder.at;
     }
     if (plan.isNotEmpty) {
-      await _writeTimes(times);
-      await _write(scheduledUntilKey, formatDate(plan.last.at));
+      await _database.db.transaction((txn) async {
+        await _writeTimes(times, txn);
+        await _write(scheduledUntilKey, formatDate(plan.last.at), txn);
+      });
     }
   }
 
@@ -153,13 +155,15 @@ class ReminderRepository {
     }
   }
 
-  Future<void> _writeTimes(Map<int, DateTime> times) => _write(
-    timesKey,
-    jsonEncode({
-      for (final MapEntry(:key, :value) in times.entries)
-        '$key': formatDateTime(value),
-    }),
-  );
+  Future<void> _writeTimes(Map<int, DateTime> times, [DatabaseExecutor? db]) =>
+      _write(
+        timesKey,
+        jsonEncode({
+          for (final MapEntry(:key, :value) in times.entries)
+            '$key': formatDateTime(value),
+        }),
+        db,
+      );
 
   Future<String?> _read(String key) async {
     final rows = await _database.db.query(
@@ -171,11 +175,11 @@ class ReminderRepository {
     return rows.isEmpty ? null : rows.single['value']! as String;
   }
 
-  Future<void> _write(String key, String value) => _database.db.insert(
-    'settings',
-    {'key': key, 'value': value},
-    conflictAlgorithm: ConflictAlgorithm.replace,
-  );
+  Future<void> _write(String key, String value, [DatabaseExecutor? db]) =>
+      (db ?? _database.db).insert('settings', {
+        'key': key,
+        'value': value,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
 
   Future<void> _delete(String key) =>
       _database.db.delete('settings', where: 'key = ?', whereArgs: [key]);

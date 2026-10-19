@@ -11,8 +11,8 @@ Future<void> main() async {
   // thrown by the plugin) must never stop the app from reaching runApp.
   try {
     await dependencies.reminders.topUp();
-  } catch (error) {
-    debugPrint('$error');
+  } catch (error, stackTrace) {
+    debugPrint('$error\n$stackTrace');
   }
   runApp(App(dependencies: dependencies));
 }

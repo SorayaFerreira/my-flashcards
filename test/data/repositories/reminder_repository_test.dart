@@ -255,7 +255,7 @@ void main() {
   });
 
   group('falhas de agendamento', () {
-    test('ArgumentError do plugin em um dia vira Result.error', () async {
+    test('NotificationScheduleException em um dia vira Result.error', () async {
       notifications.failScheduleFor.add(20261020);
 
       expect(await repository.enable(), isA<Error<bool>>());
