@@ -36,6 +36,7 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
   final Set<int> _backSeen = {};
   bool _isLoading = false;
   bool _isFinished = false;
+  int _playGeneration = 0;
   String? _loadError;
 
   bool get isLoading => _isLoading;
@@ -144,15 +145,21 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
     }
     final path = audioPathOf(side);
     if (path == null) return false;
-    return await _mediaRepository.play(path) is Ok;
+    final generation = ++_playGeneration;
+    if (await _mediaRepository.play(path) is Ok) return true;
+    // A later play or stop made this failure irrelevant.
+    return generation != _playGeneration;
   }
 
-  Future<void> stopAudio() => _mediaRepository.stopPlayback();
+  Future<void> stopAudio() {
+    _playGeneration++;
+    return _mediaRepository.stopPlayback();
+  }
 
   @override
   void dispose() {
     _mediaRepository.playingPath.removeListener(notifyListeners);
-    unawaited(_mediaRepository.stopPlayback());
+    unawaited(stopAudio());
     super.dispose();
   }
 }

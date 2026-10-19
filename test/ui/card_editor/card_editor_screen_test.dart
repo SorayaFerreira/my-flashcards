@@ -11,6 +11,7 @@ import 'package:my_flashcards/utils/result.dart';
 
 import '../../fakes/fake_card_repository.dart';
 import '../../fakes/fake_media_repository.dart';
+import '../../helpers/temp_media.dart';
 
 class _GatedCardRepository extends FakeCardRepository {
   _GatedCardRepository(super.cards);
@@ -428,5 +429,96 @@ void main() {
 
     media.commitGate!.complete();
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('parada que falha mostra a mensagem', (tester) async {
+    await openEditor(tester);
+    await tester.tap(find.text('Gravar').first);
+    await tester.pump();
+    media.stopError = Exception('falhou');
+
+    await tester.tap(find.text('Parar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Não foi possível gravar o áudio.'), findsOneWidget);
+  });
+
+  testWidgets('durante uma gravação o ▶ do outro lado fica desativado', (
+    tester,
+  ) async {
+    media.root = createFakeMediaRoot(['media/aud_salvo.m4a']);
+    cards = FakeCardRepository([
+      Flashcard(
+        id: 7,
+        deckId: 1,
+        front: const CardSide(text: 'a'),
+        back: const CardSide(text: 'b', audio: 'aud_salvo.m4a'),
+        createdAt: DateTime(2026),
+      ),
+    ]);
+    await openEditor(tester, cardId: 7);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Ouvir'),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.text('Gravar').first);
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Ouvir'),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('voltar gravando pergunta, e Descartar apaga a gravação', (
+    tester,
+  ) async {
+    final results = await openEditor(tester);
+    await tester.tap(find.text('Gravar').first);
+    await tester.pump();
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Descartar alterações?'), findsOneWidget);
+
+    await tester.tap(find.text('Descartar'));
+    await tester.pumpAndSettle();
+
+    expect(results, [false]);
+    expect(media.discarded, ['aud_1.m4a']);
+    expect(media.stopRecordingCalls, 1);
+  });
+
+  testWidgets('sair da tela enquanto o microfone abre não deixa gravando', (
+    tester,
+  ) async {
+    media.microphoneGate = Completer();
+    await openEditor(tester);
+    await tester.tap(find.text('Gravar').first);
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    media.microphoneGate!.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Parar'), findsNothing);
+    expect(find.text('Regravar'), findsOneWidget);
+    expect(media.stopRecordingCalls, 1);
   });
 }

@@ -10,6 +10,8 @@ class AudioRecorderService {
     bitRate: 32000,
     sampleRate: 22050,
     numChannels: 1,
+    // Other sounds (like a ▶ elsewhere) must not pause the recording.
+    audioInterruption: AudioInterruptionMode.none,
   );
 
   final AudioRecorder _recorder;
@@ -20,7 +22,6 @@ class AudioRecorderService {
 
   Future<void> start(String path) => _recorder.start(config, path: path);
 
-  Future<void> stop() async {
-    await _recorder.stop();
-  }
+  /// Returns the path of the finished file, or null when there is none.
+  Future<String?> stop() => _recorder.stop();
 }

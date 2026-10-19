@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../../domain/models/image_origin.dart';
@@ -19,6 +21,9 @@ class MediaRepository {
   final ImagePickerService _imagePicker;
   final AudioRecorderService _recorder;
   final AudioPlayerService _player;
+
+  /// The draft file of the recording that is going on, if any.
+  String? _recordingPath;
 
   /// Lets the user take or choose a picture and keeps it as a draft. Returns
   /// the draft's file name, or null when the user cancels.
@@ -60,11 +65,26 @@ class MediaRepository {
   /// Starts recording into a new draft file and returns its name.
   Future<Result<String>> startRecording() => guard(() async {
     final name = _files.newFileName('aud', 'm4a');
-    await _recorder.start(_files.draftFile(name).path);
+    final path = _files.draftFile(name).path;
+    await _recorder.start(path);
+    _recordingPath = path;
     return name;
   });
 
-  Future<Result<void>> stopRecording() => guard(_recorder.stop);
+  /// Stops the recording. It is an error when the recorder gives no file or
+  /// the draft is missing or empty.
+  Future<Result<void>> stopRecording() => guard(() async {
+    final expected = _recordingPath;
+    _recordingPath = null;
+    final path = await _recorder.stop();
+    if (expected == null || path == null) {
+      throw const FileSystemException('A gravação não gerou um arquivo.');
+    }
+    final file = File(expected);
+    if (!file.existsSync() || file.lengthSync() == 0) {
+      throw FileSystemException('A gravação está vazia.', expected);
+    }
+  });
 
   /// Plays the file at [path], stopping whatever was playing before.
   Future<Result<void>> play(String path) => guard(() => _player.play(path));

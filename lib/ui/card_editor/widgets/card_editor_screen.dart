@@ -20,13 +20,23 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
   final _backText = TextEditingController();
   late final AppLifecycleListener _lifecycle;
 
+  // True while the app is out of sight; a recording that finishes starting
+  // in that window must be stopped right away.
+  bool _isHidden = false;
+
   CardEditorViewModel get _viewModel => widget.viewModel;
 
   @override
   void initState() {
     super.initState();
     // A recording must not go on while the app is out of sight.
-    _lifecycle = AppLifecycleListener(onHide: _viewModel.stopRecording);
+    _lifecycle = AppLifecycleListener(
+      onHide: () {
+        _isHidden = true;
+        _viewModel.stopRecording();
+      },
+      onShow: () => _isHidden = false,
+    );
     _load();
   }
 
@@ -182,8 +192,9 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
         isPlaying: _viewModel.isPlaying(side),
         canRecord: !_viewModel.isRecording && !_viewModel.isSaving,
         enabled: !_viewModel.isSaving,
+        canPlay: !_viewModel.isRecording,
         onRecord: () => _startRecording(side),
-        onStop: _viewModel.stopRecording,
+        onStop: _stopRecording,
         onTogglePlay: () => _togglePlay(side),
         onRemove: () => _viewModel.removeAudio(side),
       ),
@@ -195,7 +206,15 @@ class _CardEditorScreenState extends State<CardEditorScreen> {
   }
 
   Future<void> _startRecording(Side side) async {
-    if (!await _viewModel.startRecording(side)) _showActionError();
+    if (!await _viewModel.startRecording(side)) {
+      _showActionError();
+    } else if (_isHidden && mounted) {
+      await _stopRecording();
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    if (!await _viewModel.stopRecording()) _showActionError();
   }
 
   Future<void> _togglePlay(Side side) async {

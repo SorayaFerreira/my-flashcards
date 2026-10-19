@@ -21,6 +21,7 @@ class AudioRecorderField extends StatelessWidget {
     required this.onTogglePlay,
     required this.onRemove,
     this.enabled = true,
+    this.canPlay = true,
   });
 
   final bool isRecording;
@@ -38,6 +39,9 @@ class AudioRecorderField extends StatelessWidget {
 
   /// False while the card is saving: record, re-record and remove are off.
   final bool enabled;
+
+  /// False while any side records: playing then would stop the recording.
+  final bool canPlay;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +84,7 @@ class AudioRecorderField extends StatelessWidget {
           path: audioPath,
           isPlaying: isPlaying,
           onPressed: onTogglePlay,
+          enabled: canPlay,
         ),
         if (duration != null) ...[
           const SizedBox(width: 8),

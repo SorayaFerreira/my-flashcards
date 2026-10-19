@@ -710,5 +710,67 @@ void main() {
       expect(media.hasPlayingListeners, isFalse);
       expect(media.finishPlayback, returnsNormally);
     });
+
+    test('▶ durante uma gravação não toca nada', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+      await viewModel.startRecording(Side.back);
+
+      expect(await viewModel.togglePlay(Side.front), isTrue);
+
+      expect(media.played, isEmpty);
+      expect(viewModel.actionError, isNull);
+    });
+
+    test('parada manual que falha devolve false e descarta', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      media.stopError = Exception('falhou');
+
+      expect(await viewModel.stopRecording(), isFalse);
+      expect(await viewModel.stopRecording(), isTrue);
+    });
+
+    test('erro de um play superado por um stop é ignorado', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+      media.playGate = Completer();
+      media.playError = Exception('interrompido');
+
+      final play = viewModel.togglePlay(Side.front);
+      await pumpEventQueue();
+      await viewModel.discard();
+      media.playGate!.complete();
+
+      expect(await play, isTrue);
+      expect(viewModel.actionError, isNull);
+    });
+
+    test('discard para o som', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+      await viewModel.togglePlay(Side.front);
+      expect(media.playingPath.value, isNotNull);
+
+      await viewModel.discard();
+
+      expect(media.playingPath.value, isNull);
+    });
+
+    test('dispose para o som', () async {
+      final viewModel = newCard();
+      await viewModel.startRecording(Side.front);
+      await viewModel.stopRecording();
+      await viewModel.togglePlay(Side.front);
+      expect(media.playingPath.value, isNotNull);
+
+      viewModel.dispose();
+      await pumpEventQueue();
+
+      expect(media.playingPath.value, isNull);
+    });
   });
 }

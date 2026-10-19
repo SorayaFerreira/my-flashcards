@@ -26,6 +26,9 @@ class FakeMediaRepository implements MediaRepository {
   Completer<void>? pickGate;
   Completer<void>? commitGate;
 
+  /// When set, [requestMicrophone] waits for it before answering.
+  Completer<void>? microphoneGate;
+
   /// When set, [stopRecording] waits for it before answering.
   Completer<void>? stopGate;
 
@@ -89,6 +92,7 @@ class FakeMediaRepository implements MediaRepository {
 
   @override
   Future<Result<bool>> requestMicrophone() async {
+    await microphoneGate?.future;
     final error = microphoneError;
     if (error != null) return Result.error(error);
     return Result.ok(microphoneAllowed);

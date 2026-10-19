@@ -33,6 +33,10 @@ class _FakeRecorder implements AudioRecorderService {
   final started = <String>[];
   var stops = 0;
 
+  /// Make [stop] "succeed" without a usable take.
+  bool stopReturnsNull = false;
+  bool stopLeavesEmptyFile = false;
+
   @override
   Future<bool> requestPermission() async => allowed;
 
@@ -43,7 +47,14 @@ class _FakeRecorder implements AudioRecorderService {
   }
 
   @override
-  Future<void> stop() async => stops++;
+  Future<String?> stop() async {
+    stops++;
+    if (stopReturnsNull) return null;
+    if (stopLeavesEmptyFile && started.isNotEmpty) {
+      await File(started.last).writeAsString('');
+    }
+    return started.isEmpty ? null : started.last;
+  }
 }
 
 class _FakePlayer implements AudioPlayerService {
@@ -153,6 +164,24 @@ void main() {
 
     okValue(await repository.stopRecording());
     expect(recorder.stops, 1);
+  });
+
+  test('stopRecording falha quando o gravador não devolve o arquivo', () async {
+    await repository.startRecording();
+    recorder.stopReturnsNull = true;
+
+    expect(await repository.stopRecording(), isA<Error<void>>());
+  });
+
+  test('stopRecording falha quando o arquivo gravado está vazio', () async {
+    await repository.startRecording();
+    recorder.stopLeavesEmptyFile = true;
+
+    expect(await repository.stopRecording(), isA<Error<void>>());
+  });
+
+  test('stopRecording sem gravação em andamento falha', () async {
+    expect(await repository.stopRecording(), isA<Error<void>>());
   });
 
   test('play e stopPlayback mudam o que está tocando', () async {

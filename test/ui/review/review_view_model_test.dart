@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -214,5 +215,18 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(viewModel.isPlaying(side), isFalse);
+  });
+
+  test('erro de um play superado por um stop é ignorado', () async {
+    const side = CardSide(audio: 'aud_1.m4a');
+    media.playGate = Completer();
+    media.playError = Exception('interrompido');
+
+    final play = viewModel.toggleAudio(side);
+    await pumpEventQueue();
+    await viewModel.stopAudio();
+    media.playGate!.complete();
+
+    expect(await play, isTrue);
   });
 }

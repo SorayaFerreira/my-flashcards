@@ -10,11 +10,15 @@ class AudioPlayButton extends StatelessWidget {
     required this.path,
     required this.isPlaying,
     required this.onPressed,
+    this.enabled = true,
   });
 
   final String path;
   final bool isPlaying;
   final VoidCallback onPressed;
+
+  /// False turns ▶ / ■ off, e.g. while a recording is going on.
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +30,7 @@ class AudioPlayButton extends StatelessWidget {
       );
     }
     return IconButton.filledTonal(
-      onPressed: onPressed,
+      onPressed: enabled ? onPressed : null,
       tooltip: isPlaying ? 'Parar' : 'Ouvir',
       icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
     );
