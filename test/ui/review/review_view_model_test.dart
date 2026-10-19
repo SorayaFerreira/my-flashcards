@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +12,7 @@ import '../../fakes/fake_media_repository.dart';
 void main() {
   late FakeCardRepository cards;
   late ReviewViewModel viewModel;
+  late FakeMediaRepository media;
 
   Flashcard card(int id, int reviewCount, {int deckId = 1}) => Flashcard(
     id: id,
@@ -22,6 +24,7 @@ void main() {
   );
 
   setUp(() {
+    media = FakeMediaRepository();
     cards = FakeCardRepository([
       card(1, 5),
       card(2, 0),
@@ -31,7 +34,7 @@ void main() {
     viewModel = ReviewViewModel(
       deckId: 1,
       cardRepository: cards,
-      mediaRepository: FakeMediaRepository(),
+      mediaRepository: media,
       random: Random(1),
     );
   });
@@ -190,5 +193,40 @@ void main() {
       '/media/img_1.jpg',
     );
     expect(viewModel.imagePathOf(const CardSide(text: 'sem imagem')), isNull);
+  });
+
+  test('toggleAudio toca e para o áudio do lado', () async {
+    const side = CardSide(audio: 'aud_1.m4a');
+
+    await viewModel.toggleAudio(side);
+    expect(media.played, ['/media/aud_1.m4a']);
+    expect(viewModel.isPlaying(side), isTrue);
+
+    await viewModel.toggleAudio(side);
+    expect(viewModel.isPlaying(side), isFalse);
+  });
+
+  test('trocar de card para o som', () async {
+    await viewModel.start();
+    const side = CardSide(audio: 'aud_1.m4a');
+    await viewModel.toggleAudio(side);
+
+    viewModel.next();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(viewModel.isPlaying(side), isFalse);
+  });
+
+  test('erro de um play superado por um stop é ignorado', () async {
+    const side = CardSide(audio: 'aud_1.m4a');
+    media.playGate = Completer();
+    media.playError = Exception('interrompido');
+
+    final play = viewModel.toggleAudio(side);
+    await pumpEventQueue();
+    await viewModel.stopAudio();
+    media.playGate!.complete();
+
+    expect(await play, isTrue);
   });
 }

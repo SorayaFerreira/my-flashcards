@@ -6,6 +6,8 @@ import 'package:sqflite/sqflite.dart';
 import 'data/repositories/card_repository.dart';
 import 'data/repositories/deck_repository.dart';
 import 'data/repositories/media_repository.dart';
+import 'data/services/audio_player_service.dart';
+import 'data/services/audio_recorder_service.dart';
 import 'data/services/database_service.dart';
 import 'data/services/image_picker_service.dart';
 import 'data/services/media_file_service.dart';
@@ -39,6 +41,8 @@ class AppDependencies {
       media: MediaRepository(
         files: mediaFiles,
         imagePicker: ImagePickerService(),
+        recorder: AudioRecorderService(),
+        player: AudioPlayerService(),
       ),
     );
   }

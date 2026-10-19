@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../domain/models/card_side.dart';
 import '../../../domain/models/flashcard.dart';
 import '../../core/widgets/card_side_view.dart';
 import '../view_models/review_view_model.dart';
@@ -39,13 +42,24 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   Future<void> _onFlip(bool showingBack) async {
     if (!_hasFlipped) setState(() => _hasFlipped = true);
-    if (!showingBack) return;
-    if (!await _viewModel.markBackSeen() && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(ReviewViewModel.countErrorMessage)),
-      );
+    // Count first: nothing may await before the card is read, or a quick
+    // "Próximo" would make this count the next card.
+    final counted = showingBack ? _viewModel.markBackSeen() : null;
+    unawaited(_viewModel.stopAudio());
+    if (counted != null && !await counted && mounted) {
+      _showMessage(ReviewViewModel.countErrorMessage);
     }
   }
+
+  Future<void> _toggleAudio(CardSide side) async {
+    if (!await _viewModel.toggleAudio(side) && mounted) {
+      _showMessage(ReviewViewModel.audioErrorMessage);
+    }
+  }
+
+  void _showMessage(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
 
   void _restart() {
     setState(() => _hasFlipped = false);
@@ -120,6 +134,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 child: CardSideView(
                   text: card.front.text,
                   imagePath: _viewModel.imagePathOf(card.front),
+                  audioPath: _viewModel.audioPathOf(card.front),
+                  isPlaying: _viewModel.isPlaying(card.front),
+                  onToggleAudio: () => _toggleAudio(card.front),
                 ),
               ),
               back: ReviewCardFace(
@@ -128,6 +145,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 child: CardSideView(
                   text: card.back.text,
                   imagePath: _viewModel.imagePathOf(card.back),
+                  audioPath: _viewModel.audioPathOf(card.back),
+                  isPlaying: _viewModel.isPlaying(card.back),
+                  onToggleAudio: () => _toggleAudio(card.back),
                 ),
               ),
               onFlip: _onFlip,

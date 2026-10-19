@@ -26,3 +26,14 @@ Future<String> writeMedia(
   await file.writeAsString('conteúdo de teste');
   return name;
 }
+
+/// Creates empty files at [files] (paths relative to a temporary folder)
+/// and returns that folder. It is deleted after the test.
+String createFakeMediaRoot(List<String> files) {
+  final root = Directory.systemTemp.createTempSync('fake_media_');
+  addTearDown(() => root.deleteSync(recursive: true));
+  for (final file in files) {
+    File(p.join(root.path, file)).createSync(recursive: true);
+  }
+  return root.path;
+}

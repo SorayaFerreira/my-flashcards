@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -16,10 +17,13 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
     required this._cardRepository,
     required this._mediaRepository,
     Random? random,
-  }) : _random = random ?? Random();
+  }) : _random = random ?? Random() {
+    _mediaRepository.playingPath.addListener(notifyListeners);
+  }
 
   static const loadErrorMessage = 'Não foi possível carregar os cards.';
   static const countErrorMessage = 'Não foi possível salvar a revisão.';
+  static const audioErrorMessage = 'Não foi possível tocar o áudio.';
 
   final int deckId;
   final CardRepository _cardRepository;
@@ -32,6 +36,7 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
   final Set<int> _backSeen = {};
   bool _isLoading = false;
   bool _isFinished = false;
+  int _playGeneration = 0;
   String? _loadError;
 
   bool get isLoading => _isLoading;
@@ -56,6 +61,16 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
   String? imagePathOf(CardSide side) {
     final image = side.image;
     return image == null ? null : _mediaRepository.mediaPath(image);
+  }
+
+  String? audioPathOf(CardSide side) {
+    final audio = side.audio;
+    return audio == null ? null : _mediaRepository.mediaPath(audio);
+  }
+
+  bool isPlaying(CardSide side) {
+    final path = audioPathOf(side);
+    return path != null && _mediaRepository.playingPath.value == path;
   }
 
   Future<void> start() async {
@@ -83,6 +98,7 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
 
   void next() {
     if (current == null) return;
+    unawaited(stopAudio());
     if (isLast) {
       _isFinished = true;
     } else {
@@ -93,6 +109,7 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
 
   void previous() {
     if (current == null || isFirst) return;
+    unawaited(stopAudio());
     _index--;
     notifyListeners();
   }
@@ -117,5 +134,32 @@ class ReviewViewModel extends ChangeNotifier with DisposeSafeNotifier {
         notifyListeners();
         return false;
     }
+  }
+
+  /// Plays the side's audio, or stops it when it is already playing.
+  /// Returns false when it could not be played.
+  Future<bool> toggleAudio(CardSide side) async {
+    if (isPlaying(side)) {
+      await stopAudio();
+      return true;
+    }
+    final path = audioPathOf(side);
+    if (path == null) return false;
+    final generation = ++_playGeneration;
+    if (await _mediaRepository.play(path) is Ok) return true;
+    // A later play or stop made this failure irrelevant.
+    return generation != _playGeneration;
+  }
+
+  Future<void> stopAudio() {
+    _playGeneration++;
+    return _mediaRepository.stopPlayback();
+  }
+
+  @override
+  void dispose() {
+    _mediaRepository.playingPath.removeListener(notifyListeners);
+    unawaited(stopAudio());
+    super.dispose();
   }
 }

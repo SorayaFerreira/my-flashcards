@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,10 +11,12 @@ import 'package:my_flashcards/ui/review/widgets/review_screen.dart';
 
 import '../../fakes/fake_card_repository.dart';
 import '../../fakes/fake_media_repository.dart';
+import '../../helpers/temp_media.dart';
 
 void main() {
   const hint = '⟵ arraste para virar ⟶';
   late FakeCardRepository cards;
+  late FakeMediaRepository media;
 
   Flashcard card(int id, int reviewCount) => Flashcard(
     id: id,
@@ -24,8 +27,13 @@ void main() {
     reviewCount: reviewCount,
   );
 
-  Future<void> pumpScreen(WidgetTester tester, List<Flashcard> deck) async {
+  Future<void> pumpScreen(
+    WidgetTester tester,
+    List<Flashcard> deck, {
+    String mediaRoot = '',
+  }) async {
     cards = FakeCardRepository(deck);
+    media = FakeMediaRepository()..root = mediaRoot;
     await tester.pumpWidget(
       MaterialApp(
         home: ReviewScreen(
@@ -33,7 +41,7 @@ void main() {
           viewModel: ReviewViewModel(
             deckId: 1,
             cardRepository: cards,
-            mediaRepository: FakeMediaRepository(),
+            mediaRepository: media,
             random: Random(1),
           ),
         ),
@@ -166,5 +174,45 @@ void main() {
 
     expect(find.text('apple'), findsOneWidget);
     expect(find.text('Imagem não encontrada'), findsOneWidget);
+  });
+
+  testWidgets('▶ toca o áudio e virar o card para o som', (tester) async {
+    final root = createFakeMediaRoot(['media/aud_1.m4a']);
+    await pumpScreen(tester, [
+      Flashcard(
+        id: 1,
+        deckId: 1,
+        front: const CardSide(text: 'apple', audio: 'aud_1.m4a'),
+        back: const CardSide(text: 'maçã'),
+        createdAt: DateTime(2026),
+      ),
+    ], mediaRoot: root);
+
+    await tester.tap(find.byTooltip('Ouvir'));
+    await tester.pumpAndSettle();
+    expect(media.played, ['$root/media/aud_1.m4a']);
+    expect(find.byTooltip('Parar'), findsOneWidget);
+
+    await flip(tester);
+
+    expect(media.playingPath.value, isNull);
+  });
+
+  testWidgets('Próximo logo após virar conta o card virado', (tester) async {
+    await pumpScreen(tester, [card(1, 0), card(2, 3)]);
+    media.stopPlaybackGate = Completer();
+
+    await tester.fling(find.byType(FlipCard), const Offset(200, 0), 1500);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Verso'), findsOneWidget);
+    await tester.tap(find.text('Próximo ›'));
+    await tester.pump();
+    media.stopPlaybackGate!.complete();
+    await tester.pumpAndSettle();
+
+    expect(cards.cards.first.reviewCount, 1);
+    expect(cards.cards.last.reviewCount, 3);
+    expect(find.text('2 / 2'), findsOneWidget);
   });
 }

@@ -34,6 +34,8 @@
 - **Abrir o app** completa a agenda. Uma falha nisso não impede o app de abrir.
 - `flutter analyze` sem problemas e `flutter test` passando ao fim de cada tarefa.
 
+> **Recomendação da revisão da etapa 5 (2026-10-18):** tocar na notificação não deve reiniciar a navegação (por exemplo com `popUntil`). Isso fecharia um editor aberto sem passar pelo `discard()`, perdendo as alterações sem perguntar e deixando a gravação em andamento em `editor_tmp/`. Abrir o app normalmente basta.
+
 ## Pontos de atenção na revisão
 
 1. **Ligar o lembrete à noite (depois das 19:30).** Nenhuma notificação para hoje; a agenda começa amanhã. Testado na tarefa 1.
@@ -1498,7 +1500,7 @@ flutter run
   2. em **Configurações › Sistema › Data e hora**, desligue "Definir automaticamente" e adiante o relógio para 1 minuto depois desse horário;
   3. espere a notificação *"Hora de revisar!"* com o ícone do "F" (pode levar alguns minutos);
   4. **religue a data e hora automáticas.**
-- [ ] Tocar na notificação abre o app na lista de decks
+- [ ] Tocar na notificação abre o app na lista de decks (com o app já aberto, ela só traz o app para a frente)
 - [ ] Reiniciar o celular mantém os alarmes (confira com o `dumpsys`)
 - [ ] Desligar o lembrete faz os alarmes do app sumirem do `dumpsys`
 - [ ] Abrir e fechar o app várias vezes no mesmo dia não muda os horários já agendados
