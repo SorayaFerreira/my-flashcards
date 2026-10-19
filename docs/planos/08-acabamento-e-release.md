@@ -5,7 +5,7 @@
 **Objetivo:** deixar a versão 1.0.0 pronta para o dia a dia:
 - splash nas cores certas;
 - visual conferido nos temas claro e escuro;
-- APK de release assinado com uma chave própria, com no máximo 15 MB e só as permissões previstas;
+- APK de release assinado com uma chave própria, com no máximo 20 MB (era 15 MB; veja a tarefa 4) e só as permissões previstas;
 - app instalado no celular, com os dados migrados.
 
 **Arquitetura:** não há código novo de funcionalidade. Esta etapa muda recursos Android (estilos), o Gradle (assinatura), a versão e a documentação. Também acrescenta remoções de permissões ao manifesto, se a conferência mostrar alguma indesejada.
@@ -18,7 +18,7 @@
 
 ## Restrições globais
 
-- APK de release `arm64-v8a` com **até 15 MB**.
+- APK de release `arm64-v8a` com **até 20 MB**. Era 15 MB até 2026-10-19; veja o resultado da tarefa 4.
 - **Permissões permitidas no APK final:** `RECORD_AUDIO`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE` (vem do plugin de notificações) e `com.sorayaferreira.myflashcards.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (vem do AndroidX).
 - **Permissões proibidas:** `INTERNET`, `CAMERA`, `READ_MEDIA_IMAGES`, `READ_MEDIA_AUDIO`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `SCHEDULE_EXACT_ALARM` e `USE_EXACT_ALARM`.
 - **A chave de assinatura e as senhas nunca entram no git.** Elas ficam em `~/.android-keys/` e no `android/key.properties`, que já é ignorado pelo `.gitignore` do template.
@@ -105,6 +105,8 @@ git commit -m "chore: splash com as cores do app nos temas claro e escuro"
 
 ### Tarefa 2: versão 1.0.0 e revisão visual
 
+> **Feito na execução (2026-10-19):** antes do teste no celular, um teste automático abriu todas as telas com a fonte em 2,0 num celular de 360×640, nos temas claro e escuro. Só a revisão transbordava: a linha Anterior/Próximo (246 px) e a tela de fim de revisão (32 px). As duas foram corrigidas, com testes de regressão, no commit `fix: keep the review screen within bounds at the largest font size`. O passo 3 continua valendo no celular, que pode ter outro tamanho de tela.
+
 **Arquivos:**
 - Modificar: `pubspec.yaml` e `lib/app_version.dart`
 - Testar: `test/app_version_test.dart` (já existe)
@@ -161,6 +163,11 @@ git commit -m "chore: versão 1.0.0"
 ---
 
 ### Tarefa 3: chave de assinatura de release
+
+> **Ajustes feitos na execução (2026-10-19):**
+> - O Gradle lê o `key.properties` com `getProperty`, que aceita a ausência do valor, em vez de `as String`. Com o código do plano, a falta do arquivo quebrava **todos** os builds, inclusive o `flutter run` de debug. Agora, sem o arquivo, só o release falha, com a mensagem `SigningConfig "release" is missing required property "storeFile"`.
+> - O bloco que lê o arquivo fica depois de `plugins { ... }`, como na documentação do Flutter, e só importa `java.util.Properties`.
+> - Os passos 1 a 3 (gerar a chave, guardar a cópia e criar o `key.properties`) são da Soraya, para a senha não passar pelos agentes. A configuração foi conferida com uma chave descartável, fora do repositório.
 
 **Arquivos:**
 - Criar (fora do git): `~/.android-keys/my-flashcards.jks` e `android/key.properties`
@@ -267,6 +274,12 @@ git commit -m "chore: assina o build de release com a chave própria"
 
 ### Tarefa 4: conferir tamanho e permissões do APK
 
+> **Resultado (2026-10-19, com a chave descartável):**
+> - **Tamanho:** o `app-arm64-v8a-release.apk` tem 19,1 MB: `libflutter.so` (o motor do Flutter) com 11,7 MB, `libapp.so` (o código do app e dos pacotes, já sem símbolos de depuração) com 6,0 MB, `classes.dex` com 0,9 MB e o resto com 0,5 MB. Os `.so` ficam sem compressão, que é o padrão para minSdk 23 ou mais, e o Android os usa direto do APK. Comprimidos, o APK cairia para uns 9 MB, mas o app ocuparia uns 27 MB depois de instalado. A Soraya decidiu manter, e o limite passou para 20 MB (RNF-04 e o registro de decisões em [requisitos.md](../requisitos.md)).
+> - **Permissões:** só as permitidas. Nenhuma remoção foi necessária.
+> - **Identificação:** `name='com.sorayaferreira.myflashcards'`, `versionName='1.0.0'`, `minSdkVersion:'33'` e `targetSdkVersion:'36'`. O `versionCode` do APK arm64 é `2001`, porque o `--split-per-abi` soma 2000 no arm64.
+> - **Ícones:** `drawable/ic_notification` e `drawable/splash_logo` estão no APK. O R8 encurta os caminhos dos arquivos de recursos, então procure com `aapt2 dump resources`, não com `unzip -l`.
+
 **Arquivos:**
 - Modificar (só se necessário): `android/app/src/main/AndroidManifest.xml`
 
@@ -276,7 +289,7 @@ git commit -m "chore: assina o build de release com a chave própria"
 ls -lh build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
 
-Esperado: **até 15 MB**. Se passar, investigue o que ocupa espaço:
+Esperado: **até 20 MB** (era 15 MB). Se passar, investigue o que ocupa espaço:
 ```bash
 flutter build apk --release --target-platform android-arm64 --analyze-size
 ```
@@ -326,7 +339,7 @@ Esperado: `package: name='com.sorayaferreira.myflashcards'`, `versionName='1.0.0
 
 ### Tarefa 5: instalar o release no celular, sem perder dados
 
-> **Recomendações da revisão da etapa 7 (2026-10-20):** antes de desinstalar o build de debug, confira o zip no computador (`unzip -l` e `sqlite3 flashcards.db 'select count(*) from cards'`), guarde-o em **dois lugares** e, se possível, teste a importação desse zip no APK de release num emulador com Android 13 ou mais novo. A importação precisa funcionar no build de release, que passa pelo R8.
+> **Recomendações da revisão da etapa 7 (2026-10-19):** antes de desinstalar o build de debug, confira o zip no computador (`unzip -l` e `sqlite3 flashcards.db 'select count(*) from cards'`), guarde-o em **dois lugares** e, se possível, teste a importação desse zip no APK de release num emulador com Android 13 ou mais novo. A importação precisa funcionar no build de release, que passa pelo R8.
 
 **Arquivos:** nenhum.
 
@@ -371,7 +384,7 @@ Requisitos funcionais:
 
 Requisitos não funcionais:
 - [ ] RNF-02: com o modo avião ligado, tudo funciona
-- [ ] RNF-04: o APK arm64 tem até 15 MB, e o app abre rápido
+- [ ] RNF-04: o APK arm64 tem até 20 MB, e o app abre rápido
 - [ ] RNF-05: os temas claro e escuro estão conferidos
 - [ ] RNF-06: nenhum texto em inglês na interface
 
@@ -412,6 +425,8 @@ Antes de cada atualização, aumente o número depois do `+` em `version:` no `p
 ````
 
 - [ ] **Passo 3: commit, merge e tag**
+
+> **Na execução:** o merge no `main` é feito pela Soraya, por PR no GitHub, e os agentes nunca dão push. A tag `v1.0.0` é criada no `main` depois do merge, e a Soraya a envia com `git push origin v1.0.0`.
 
 ```bash
 git add docs/README.md README.md

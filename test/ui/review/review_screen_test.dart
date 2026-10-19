@@ -215,4 +215,61 @@ void main() {
     expect(cards.cards.last.reviewCount, 3);
     expect(find.text('2 / 2'), findsOneWidget);
   });
+
+  testWidgets('Anterior fica à esquerda e Próximo à direita', (tester) async {
+    await pumpScreen(tester, [card(1, 0), card(2, 0)]);
+
+    final screenWidth = tester.getSize(find.byType(ReviewScreen)).width;
+    expect(tester.getTopLeft(find.text('‹ Anterior')).dx, lessThan(64));
+    expect(
+      tester.getTopRight(find.text('Próximo ›')).dx,
+      greaterThan(screenWidth - 64),
+    );
+  });
+
+  group('com a fonte do sistema no máximo', () {
+    Future<void> pumpLargeText(
+      WidgetTester tester,
+      List<Flashcard> deck,
+    ) async {
+      tester.view.physicalSize = const Size(360 * 3, 640 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      cards = FakeCardRepository(deck);
+      media = FakeMediaRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2.0)),
+            child: child!,
+          ),
+          home: ReviewScreen(
+            deckName: 'Verbos',
+            viewModel: ReviewViewModel(
+              deckId: 1,
+              cardRepository: cards,
+              mediaRepository: media,
+              random: Random(1),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('os botões de navegação cabem na largura', (tester) async {
+      await pumpLargeText(tester, [card(1, 0), card(2, 0)]);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Próximo ›'), findsOneWidget);
+    });
+
+    testWidgets('a tela de revisão concluída cabe na altura', (tester) async {
+      await pumpLargeText(tester, []);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Revisão concluída!'), findsOneWidget);
+    });
+  });
 }
