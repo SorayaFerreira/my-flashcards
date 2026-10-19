@@ -12,6 +12,8 @@ import '../services/database_service.dart';
 import '../services/media_file_service.dart';
 import '../services/zip_service.dart';
 
+const _manifestName = 'manifest.json';
+
 class BackupRepository {
   BackupRepository({
     required this._database,
@@ -21,9 +23,9 @@ class BackupRepository {
     required this._workDir,
     required this._rollbackRoot,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now;
-
-  static const _manifestName = 'manifest.json';
+    @visibleForTesting Future<void> Function(String from, String to)? move,
+  }) : _now = now ?? DateTime.now,
+       _move = move ?? _moveEntity;
 
   final DatabaseService _database;
   final MediaFileService _mediaFiles;
@@ -35,6 +37,11 @@ class BackupRepository {
   /// automatically: after a failed restore it may hold the only copy.
   final Directory _rollbackRoot;
   final DateTime Function() _now;
+
+  /// Moves a file or folder; replaceable so tests can make a step fail.
+  final Future<void> Function(String from, String to) _move;
+
+  var _prepared = false;
 
   Directory get _importDir => Directory(p.join(_workDir.path, 'import'));
 
@@ -49,13 +56,14 @@ class BackupRepository {
     try {
       final dbCopy = p.join(exportDir.path, DatabaseService.fileName);
       await _database.copyTo(dbCopy);
+      final counts = await _database.countsIn(dbCopy);
       final manifest = BackupManifest(
         app: BackupManifest.appId,
         formatVersion: BackupManifest.currentFormatVersion,
         schemaVersion: DatabaseService.schemaVersion,
         exportedAt: now,
-        decks: await _count('decks'),
-        cards: await _count('cards'),
+        decks: counts.decks,
+        cards: counts.cards,
       );
       final manifestPath = p.join(exportDir.path, _manifestName);
       await File(manifestPath).writeAsString(jsonEncode(manifest.toJson()));
@@ -91,70 +99,150 @@ class BackupRepository {
   /// confirm before anything changes.
   Future<Result<BackupManifest>> prepareImport(String zipPath) =>
       guard(() async {
-        final importDir = await _freshDir('import');
-        _checkEntryNames(await _zip.listEntries(zipPath));
-        await _zip.extract(zipPath, importDir.path);
-
-        final manifestFile = File(p.join(importDir.path, _manifestName));
-        final manifest = BackupManifest.fromJson(
-          jsonDecode(await manifestFile.readAsString()),
-        );
-        if (manifest.app != BackupManifest.appId ||
-            manifest.formatVersion != BackupManifest.currentFormatVersion ||
-            manifest.schemaVersion > DatabaseService.schemaVersion) {
-          throw const FormatException('Backup de outro app ou mais novo.');
+        _prepared = false;
+        try {
+          final importDir = await _freshDir('import');
+          _checkEntryNames(await _zip.listEntries(zipPath));
+          await _zip.extract(zipPath, importDir.path);
+          final manifest = await _validateExtracted(importDir);
+          _prepared = true;
+          return manifest;
+        } catch (_) {
+          await _deleteTree(_importDir);
+          rethrow;
         }
-        final importedDb = p.join(importDir.path, DatabaseService.fileName);
-        await _database.checkReadable(importedDb);
-        for (final name in await _database.mediaNamesIn(importedDb)) {
-          if (!MediaFileService.isPlainFileName(name)) {
-            throw FormatException('Nome de mídia inesperado no backup: $name');
-          }
-        }
-        return manifest;
       });
 
-  /// Replaces all app data with the prepared backup. The current data is
-  /// kept aside and put back if any step fails.
-  Future<Result<void>> applyImport() => guard(() async {
-    final rollbackDir = await _newRollbackDir();
-    final dbFiles = [
-      for (final suffix in ['', '-wal', '-shm', '-journal'])
-        '${_database.path}$suffix',
-    ];
-
-    await _database.close();
-    try {
-      for (final path in dbFiles) {
-        await _moveIfExists(path, p.join(rollbackDir.path, p.basename(path)));
+  Future<BackupManifest> _validateExtracted(Directory importDir) async {
+    final manifestPath = p.join(importDir.path, _manifestName);
+    final importedDb = p.join(importDir.path, DatabaseService.fileName);
+    final mediaPath = p.join(importDir.path, 'media');
+    final mediaType = await FileSystemEntity.type(
+      mediaPath,
+      followLinks: false,
+    );
+    if (await FileSystemEntity.type(manifestPath, followLinks: false) !=
+            FileSystemEntityType.file ||
+        await FileSystemEntity.type(importedDb, followLinks: false) !=
+            FileSystemEntityType.file ||
+        (mediaType != FileSystemEntityType.notFound &&
+            mediaType != FileSystemEntityType.directory)) {
+      throw const FormatException('Backup com arquivos inesperados.');
+    }
+    final manifest = BackupManifest.fromJson(
+      jsonDecode(await File(manifestPath).readAsString()),
+    );
+    if (manifest.app != BackupManifest.appId ||
+        manifest.formatVersion != BackupManifest.currentFormatVersion ||
+        manifest.schemaVersion > DatabaseService.schemaVersion) {
+      throw const FormatException('Backup de outro app ou mais novo.');
+    }
+    await _database.checkReadable(importedDb);
+    for (final name in await _database.mediaNamesIn(importedDb)) {
+      if (!MediaFileService.isPlainFileName(name)) {
+        throw FormatException('Nome de mídia inesperado no backup: $name');
       }
-      await _moveIfExists(
-        _mediaFiles.mediaDir.path,
-        p.join(rollbackDir.path, 'media'),
-      );
-      await _move(
-        p.join(_importDir.path, DatabaseService.fileName),
-        _database.path,
-      );
-      await _moveIfExists(
-        p.join(_importDir.path, 'media'),
-        _mediaFiles.mediaDir.path,
-      );
+    }
+    return manifest;
+  }
+
+  /// Replaces all app data with the prepared backup.
+  ///
+  /// Every completed move is journaled: [moved] holds (live path, rollback
+  /// path) for the originals put aside, [placed] holds (import path, live
+  /// path) for the imported items put in their place. If a step fails, only
+  /// what was journaled is undone, in reverse order, so a live path this
+  /// import did not fill is never deleted.
+  Future<Result<void>> applyImport() => guard(() async {
+    if (!_prepared) throw const FormatException('Nenhum backup preparado.');
+    _prepared = false;
+    final rollbackDir = await _newRollbackDir();
+    final moved = <(String, String)>[];
+    final placed = <(String, String)>[];
+    final dbPath = _database.path;
+    final importedDb = p.join(_importDir.path, DatabaseService.fileName);
+    final importedMedia = p.join(_importDir.path, 'media');
+
+    Future<void> setAside(String live, String name) async {
+      if (await FileSystemEntity.type(live, followLinks: false) ==
+          FileSystemEntityType.notFound) {
+        return;
+      }
+      final aside = p.join(rollbackDir.path, name);
+      await _move(live, aside);
+      moved.add((live, aside));
+    }
+
+    Future<void> place(String from, String to) async {
+      await _move(from, to);
+      placed.add((from, to));
+    }
+
+    try {
+      await _database.close();
+      for (final suffix in _dbSuffixes) {
+        await setAside('$dbPath$suffix', p.basename('$dbPath$suffix'));
+      }
+      await setAside(_mediaFiles.mediaDir.path, 'media');
+      await place(importedDb, dbPath);
+      if (await FileSystemEntity.type(importedMedia, followLinks: false) !=
+          FileSystemEntityType.notFound) {
+        await place(importedMedia, _mediaFiles.mediaDir.path);
+      }
       await _mediaFiles.ensureDirectories();
       await _database.open();
-    } on Exception {
-      await _restore(rollbackDir, dbFiles);
-      await _deleteIfEmpty(rollbackDir);
+    } catch (_) {
+      await _undo(rollbackDir, moved, placed);
       rethrow;
     }
-    await rollbackDir.delete(recursive: true);
-    await _importDir.delete(recursive: true);
+    // Committed: the new data is in place and open. Cleaning up is best
+    // effort, and cleanOldExports retries import/ on the next start.
+    await _deleteTree(rollbackDir);
+    await _deleteTree(_importDir);
   });
 
+  static const _dbSuffixes = ['', '-wal', '-shm', '-journal'];
+
+  /// Puts back exactly what the journals say was moved. A failing step is
+  /// logged and the rest still runs; the rollback folder is only removed
+  /// (never recursively) when every step worked.
+  Future<void> _undo(
+    Directory rollbackDir,
+    List<(String, String)> moved,
+    List<(String, String)> placed,
+  ) async {
+    var clean = true;
+    Future<void> step(Future<void> Function() action) async {
+      try {
+        await action();
+      } catch (error) {
+        clean = false;
+        debugPrint('Não foi possível restaurar os dados: $error');
+      }
+    }
+
+    await step(_database.close);
+    for (final (from, to) in placed.reversed) {
+      await step(() => _move(to, from));
+    }
+    // The originals' sidecars were all moved before the imported database was
+    // placed, so any sidecar at the live path now belongs to the imported one.
+    if (placed.any((item) => item.$2 == _database.path)) {
+      for (final suffix in _dbSuffixes.skip(1)) {
+        await step(() => _deleteIfExists('${_database.path}$suffix'));
+      }
+    }
+    for (final (live, aside) in moved.reversed) {
+      await step(() => _move(aside, live));
+    }
+    await step(_mediaFiles.ensureDirectories);
+    await step(_database.open);
+    if (clean) await _deleteIfEmpty(rollbackDir);
+  }
+
   Future<void> cancelImport() async {
-    await guard(() async {
-      if (await _importDir.exists()) await _importDir.delete(recursive: true);
-    });
+    _prepared = false;
+    await _deleteTree(_importDir);
   }
 
   /// Deletes the .zip files of earlier exports and leftover work folders.
@@ -174,34 +262,6 @@ class BackupRepository {
     });
   }
 
-  Future<void> _restore(Directory rollbackDir, List<String> dbFiles) async {
-    try {
-      await _database.close();
-      for (final path in dbFiles) {
-        await _deleteIfExists(path);
-      }
-      if (await _mediaFiles.mediaDir.exists()) {
-        await _mediaFiles.mediaDir.delete(recursive: true);
-      }
-      for (final path in dbFiles) {
-        await _moveIfExists(p.join(rollbackDir.path, p.basename(path)), path);
-      }
-      await _moveIfExists(
-        p.join(rollbackDir.path, 'media'),
-        _mediaFiles.mediaDir.path,
-      );
-      await _mediaFiles.ensureDirectories();
-      await _database.open();
-    } on Exception catch (error) {
-      debugPrint('Não foi possível restaurar os dados: $error');
-    }
-  }
-
-  Future<int> _count(String table) async {
-    final rows = await _database.db.rawQuery('SELECT COUNT(*) FROM $table');
-    return rows.single.values.single! as int;
-  }
-
   /// A folder no earlier import has used; existing ones are never reused.
   Future<Directory> _newRollbackDir() async {
     final base = 'rollback-${_now().millisecondsSinceEpoch}';
@@ -219,24 +279,23 @@ class BackupRepository {
   }
 }
 
-/// Only the three kinds of entries this app writes are accepted, which also
+/// Only the entries this app writes are accepted: the manifest, the
+/// database, the `media/` folder and plain files directly inside it. That also
 /// rules out paths that would escape the extraction folder.
 void _checkEntryNames(List<String> names) {
   for (final name in names) {
     final parts = p.posix.split(name);
     final allowed =
-        name == 'manifest.json' ||
+        name == _manifestName ||
         name == DatabaseService.fileName ||
-        (parts.isNotEmpty && parts.first == 'media' && parts.length <= 2);
-    final safe =
-        !p.posix.isAbsolute(name) &&
-        !name.contains(r'\') &&
-        !parts.contains('..');
-    if (!allowed || !safe) {
-      throw FormatException('Entrada inesperada no backup: $name');
-    }
+        name == 'media/' ||
+        (!name.endsWith('/') &&
+            parts.length == 2 &&
+            parts[0] == 'media' &&
+            MediaFileService.isPlainFileName(parts[1]));
+    if (!allowed) throw FormatException('Entrada inesperada no backup: $name');
   }
-  if (!names.contains('manifest.json') ||
+  if (!names.contains(_manifestName) ||
       !names.contains(DatabaseService.fileName)) {
     throw const FormatException('Backup incompleto.');
   }
@@ -251,7 +310,7 @@ Future<void> _deleteIfEmpty(Directory dir) async {
   }
 }
 
-Future<void> _move(String from, String to) async {
+Future<void> _moveEntity(String from, String to) async {
   if (await FileSystemEntity.isDirectory(from)) {
     await Directory(from).rename(to);
   } else {
@@ -259,9 +318,11 @@ Future<void> _move(String from, String to) async {
   }
 }
 
-Future<void> _moveIfExists(String from, String to) async {
-  if (await FileSystemEntity.type(from) != FileSystemEntityType.notFound) {
-    await _move(from, to);
+Future<void> _deleteTree(Directory dir) async {
+  try {
+    if (await dir.exists()) await dir.delete(recursive: true);
+  } on FileSystemException catch (error) {
+    debugPrint('Não foi possível apagar ${dir.path}: $error');
   }
 }
 

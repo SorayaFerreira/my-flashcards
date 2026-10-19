@@ -67,6 +67,26 @@ class DatabaseService {
     }
   }
 
+  /// How many decks and cards the database at [path] holds, read-only.
+  Future<({int decks, int cards})> countsIn(String path) async {
+    final other = await _factory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(readOnly: true, singleInstance: false),
+    );
+    try {
+      return (
+        decks: Sqflite.firstIntValue(
+          await other.rawQuery('SELECT COUNT(*) FROM decks'),
+        )!,
+        cards: Sqflite.firstIntValue(
+          await other.rawQuery('SELECT COUNT(*) FROM cards'),
+        )!,
+      );
+    } finally {
+      await other.close();
+    }
+  }
+
   /// Every media file name stored in the database at [path], read-only.
   Future<List<String>> mediaNamesIn(String path) async {
     final other = await _factory.openDatabase(
@@ -81,7 +101,10 @@ class DatabaseService {
       return [
         for (final row in rows)
           for (final value in row.values)
-            if (value != null) value.toString(),
+            if (value is String)
+              value
+            else if (value != null)
+              throw FormatException('Nome de mídia que não é texto: $value.'),
       ];
     } finally {
       await other.close();

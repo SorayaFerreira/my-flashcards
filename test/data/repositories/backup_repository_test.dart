@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_flashcards/data/repositories/backup_repository.dart';
@@ -36,7 +37,10 @@ void main() {
   late BackupRepository repository;
   final zip = ZipService();
 
-  Future<void> setUpWith(DatabaseService db) async {
+  Future<void> setUpWith(
+    DatabaseService db, {
+    Future<void> Function(String, String)? move,
+  }) async {
     database = db;
     await database.open();
     repository = BackupRepository(
@@ -47,6 +51,7 @@ void main() {
       workDir: Directory(p.join(root.path, 'backup')),
       rollbackRoot: Directory(p.join(root.path, 'support', 'backup_rollback')),
       now: () => DateTime(2026, 10, 12, 20, 15),
+      move: move,
     );
   }
 
@@ -119,6 +124,64 @@ void main() {
           cards: 0,
         ).toJson(),
       );
+
+  Directory rollbackRoot() =>
+      Directory(p.join(root.path, 'support', 'backup_rollback'));
+
+  Future<File> plantOldRollback() async {
+    final old = Directory(p.join(rollbackRoot().path, 'rollback-123'));
+    await old.create(recursive: true);
+    return File(p.join(old.path, 'flashcards.db')).writeAsString('meus dados');
+  }
+
+  List<String> rollbackFolders() => rollbackRoot().existsSync()
+      ? [for (final e in rollbackRoot().listSync()) p.basename(e.path)]
+      : [];
+
+  Future<void> expectOriginalsIntact() async {
+    expect(await deckNames(), ['Atual']);
+    expect(await mediaFiles.mediaFile('img_atual.jpg').readAsString(), 'foto');
+    expect(await mediaFiles.mediaFile('img_backup.jpg').exists(), isFalse);
+    expect(await mediaFiles.mediaDir.exists(), isTrue);
+    await database.db.insert('decks', {'name': 'Novo', 'created_at': 0});
+    expect(await deckNames(), ['Atual', 'Novo']);
+    expect(rollbackFolders(), isEmpty);
+  }
+
+  Future<void> Function(String, String) failOnce(
+    bool Function(String from, String to) matches,
+  ) {
+    var failed = false;
+    return (from, to) async {
+      if (!failed && matches(from, to)) {
+        failed = true;
+        throw const FileSystemException('falha simulada');
+      }
+      if (await FileSystemEntity.isDirectory(from)) {
+        await Directory(from).rename(to);
+      } else {
+        await File(from).rename(to);
+      }
+    };
+  }
+
+  Future<void> failingSwap(
+    bool Function(String from, String to) matches,
+  ) async {
+    await seedDeck('Backup', image: 'img_backup.jpg');
+    final zipPath = okValue(await repository.exportBackup());
+    await database.db.delete('decks');
+    await mediaFiles.mediaFile('img_backup.jpg').delete();
+    await seedDeck('Atual', image: 'img_atual.jpg');
+    await setUpWith(database, move: failOnce(matches));
+    okValue(await repository.prepareImport(zipPath));
+
+    expect(await repository.applyImport(), isA<Error<void>>());
+
+    await expectOriginalsIntact();
+  }
+
+  String dbPath() => p.join(root.path, 'db', DatabaseService.fileName);
 
   test('exporta um zip com manifesto, banco e mídias', () async {
     await seedDeck('Inglês', image: 'img_1.jpg');
@@ -222,7 +285,7 @@ void main() {
     );
   });
 
-  test('falha no meio da troca devolve os dados originais', () async {
+  test('falha na reabertura devolve os dados originais', () async {
     await seedDeck('Backup', image: 'img_backup.jpg');
     final zipPath = okValue(await repository.exportBackup());
     await database.close();
@@ -234,13 +297,13 @@ void main() {
       ),
     );
     await database.db.delete('decks');
+    await mediaFiles.mediaFile('img_backup.jpg').delete();
     await seedDeck('Atual', image: 'img_atual.jpg');
     okValue(await repository.prepareImport(zipPath));
 
     expect(await repository.applyImport(), isA<Error<void>>());
 
-    expect(await deckNames(), ['Atual']);
-    expect(await mediaFiles.mediaFile('img_atual.jpg').readAsString(), 'foto');
+    await expectOriginalsIntact();
   });
 
   test('cancelImport apaga a pasta extraída', () async {
@@ -279,19 +342,6 @@ void main() {
 
     expect(await File(zipPath).exists(), isFalse);
   });
-
-  Directory rollbackRoot() =>
-      Directory(p.join(root.path, 'support', 'backup_rollback'));
-
-  Future<File> plantOldRollback() async {
-    final old = Directory(p.join(rollbackRoot().path, 'rollback-123'));
-    await old.create(recursive: true);
-    return File(p.join(old.path, 'flashcards.db')).writeAsString('meus dados');
-  }
-
-  List<String> rollbackFolders() => rollbackRoot().existsSync()
-      ? [for (final e in rollbackRoot().listSync()) p.basename(e.path)]
-      : [];
 
   test('um rollback antigo sobrevive a uma importação bem-sucedida', () async {
     await seedDeck('Inglês');
@@ -368,9 +418,12 @@ void main() {
         'name': 'x',
         'created_at': 0,
       });
+      final audio = name.startsWith('AUDIO:');
       await bad.db.insert('cards', {
         'deck_id': deckId,
-        'front_image': name,
+        (audio ? 'back_audio' : 'front_image'): audio
+            ? name.substring(6)
+            : name,
         'created_at': 0,
       });
       await bad.close();
@@ -398,5 +451,160 @@ void main() {
     final zipPath = okValue(await repository.exportBackup());
 
     okValue(await repository.prepareImport(zipPath));
+  });
+
+  test('(a) falha ao mover o banco original', () async {
+    await failingSwap((from, to) => from == dbPath());
+  });
+
+  test('(b) falha ao mover a mídia original depois do banco', () async {
+    await failingSwap((from, to) => from == mediaFiles.mediaDir.path);
+  });
+
+  test('(c) falha ao colocar o banco importado', () async {
+    await failingSwap((from, to) => to == dbPath() && from.contains('import'));
+  });
+
+  test('(d) falha ao colocar a mídia importada', () async {
+    await failingSwap(
+      (from, to) => to == mediaFiles.mediaDir.path && from.contains('import'),
+    );
+  });
+
+  test('recusa entradas media, media/., media/.. e aninhadas', () async {
+    for (final entry in ['media', 'media/.', 'media/..', 'media/a/b.jpg']) {
+      final zipPath = await handMadeZip({
+        'manifest.json': manifestJson(),
+        'flashcards.db': 'x',
+        entry: 'x',
+      });
+
+      expect(
+        await repository.prepareImport(zipPath),
+        isA<Error<BackupManifest>>(),
+        reason: entry,
+      );
+      expect(
+        await Directory(p.join(root.path, 'backup', 'import')).exists(),
+        isFalse,
+      );
+    }
+  });
+
+  test('um erro na limpeza depois da troca ainda devolve Ok', () async {
+    await seedDeck('Inglês');
+    final zipPath = okValue(await repository.exportBackup());
+    okValue(await repository.prepareImport(zipPath));
+    final work = p.join(root.path, 'backup');
+    Process.runSync('chmod', ['555', work]);
+    try {
+      okValue(await repository.applyImport());
+    } finally {
+      Process.runSync('chmod', ['755', work]);
+    }
+
+    expect(await deckNames(), ['Inglês']);
+    expect(await database.db.query('decks'), isNotEmpty);
+  });
+
+  test('applyImport sem prepareImport devolve Error', () async {
+    await seedDeck('Atual');
+
+    expect(await repository.applyImport(), isA<Error<void>>());
+    expect(await deckNames(), ['Atual']);
+  });
+
+  test('applyImport duas vezes seguidas: a segunda devolve Error', () async {
+    await seedDeck('Inglês');
+    final zipPath = okValue(await repository.exportBackup());
+    okValue(await repository.prepareImport(zipPath));
+    okValue(await repository.applyImport());
+
+    expect(await repository.applyImport(), isA<Error<void>>());
+  });
+
+  test('um backup recusado não deixa a pasta import', () async {
+    final zipPath = await handMadeZip({
+      'manifest.json': manifestJson(app: 'outro_app'),
+      'flashcards.db': 'x',
+    });
+
+    expect(
+      await repository.prepareImport(zipPath),
+      isA<Error<BackupManifest>>(),
+    );
+    expect(
+      await Directory(p.join(root.path, 'backup', 'import')).exists(),
+      isFalse,
+    );
+    expect(await repository.applyImport(), isA<Error<void>>());
+  });
+
+  test('recusa outro formatVersion', () async {
+    final manifest = jsonEncode(
+      BackupManifest(
+        app: 'my_flashcards',
+        formatVersion: 2,
+        schemaVersion: 1,
+        exportedAt: DateTime(2026),
+        decks: 0,
+        cards: 0,
+      ).toJson(),
+    );
+    final zipPath = await handMadeZip({
+      'manifest.json': manifest,
+      'flashcards.db': 'x',
+    });
+
+    expect(
+      await repository.prepareImport(zipPath),
+      isA<Error<BackupManifest>>(),
+    );
+  });
+
+  test('recusa um zip de fotos sem manifesto', () async {
+    final zipPath = await handMadeZip({'media/x.jpg': 'foto'});
+
+    expect(
+      await repository.prepareImport(zipPath),
+      isA<Error<BackupManifest>>(),
+    );
+  });
+
+  test('o manifesto conta os decks do arquivo exportado', () async {
+    await seedDeck('Um');
+    await seedDeck('Dois');
+    final zipPath = okValue(await repository.exportBackup());
+
+    final manifest = okValue(await repository.prepareImport(zipPath));
+
+    expect(manifest.decks, 2);
+    expect(manifest.cards, 2);
+  });
+
+  test('recusa mídia que não é texto no banco', () async {
+    final dbFile = p.join(root.path, 'blob.db');
+    final bad = DatabaseService(factory: databaseFactoryFfi, path: dbFile);
+    await bad.open();
+    await bad.db.execute('PRAGMA user_version = 1');
+    final deckId = await bad.db.insert('decks', {'name': 'x', 'created_at': 0});
+    await bad.db.insert('cards', {
+      'deck_id': deckId,
+      'front_image': Uint8List.fromList([1, 2, 3]),
+      'created_at': 0,
+    });
+    await bad.close();
+    final manifest = File(p.join(root.path, 'm.json'))
+      ..writeAsStringSync(manifestJson());
+    final zipPath = p.join(root.path, 'blob.zip');
+    await zip.createZip(zipPath, {
+      'manifest.json': manifest.path,
+      'flashcards.db': dbFile,
+    });
+
+    expect(
+      await repository.prepareImport(zipPath),
+      isA<Error<BackupManifest>>(),
+    );
   });
 }

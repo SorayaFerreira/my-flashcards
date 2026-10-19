@@ -63,4 +63,25 @@ void main() {
     expect(files['media/img_1.jpg']!.compression, CompressionType.none);
     expect(files['manifest.json']!.compression, CompressionType.deflate);
   });
+
+  test('listEntries recusa um zip com link simbólico', () async {
+    final archive = Archive()
+      ..add(ArchiveFile.string('media/x.jpg', '/etc/passwd')..mode = 0xA1FF);
+    final zipPath = p.join(root.path, 'link.zip');
+    final bytes = ZipEncoder().encode(archive);
+    // The encoder always marks entries as made by MS-DOS, and the decoder only
+    // reads the Unix mode (which holds the link flag) when the creator is
+    // Unix (3), so flip that byte in the central directory header.
+    for (var i = 0; i < bytes.length - 5; i++) {
+      if (bytes[i] == 0x50 &&
+          bytes[i + 1] == 0x4b &&
+          bytes[i + 2] == 0x01 &&
+          bytes[i + 3] == 0x02) {
+        bytes[i + 5] = 3;
+      }
+    }
+    await File(zipPath).writeAsBytes(bytes);
+
+    await expectLater(zip.listEntries(zipPath), throwsFormatException);
+  });
 }

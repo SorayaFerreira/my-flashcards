@@ -10,6 +10,8 @@ class ZipService {
   Future<void> createZip(String zipPath, Map<String, String> entries) =>
       Isolate.run(() => _createZip(zipPath, entries));
 
+  /// The entry names. Throws a [FormatException] if the zip is not a zip or
+  /// holds a symbolic link: backups never contain links.
   Future<List<String>> listEntries(String zipPath) =>
       Isolate.run(() => _listEntries(zipPath));
 
@@ -60,7 +62,11 @@ Archive _decode(InputFileStream input) {
 List<String> _listEntries(String zipPath) {
   final input = InputFileStream(zipPath);
   try {
-    return [for (final file in _decode(input).files) file.name];
+    final files = _decode(input).files;
+    if (files.any((file) => file.isSymbolicLink)) {
+      throw const FormatException('O zip tem um link simbólico.');
+    }
+    return [for (final file in files) file.name];
   } finally {
     input.closeSync();
   }
