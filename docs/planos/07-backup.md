@@ -1817,7 +1817,7 @@ git commit -m "feat: exportar e importar backup pelas configurações"
 
 ### Tarefa 6: conferir no celular e fechar a etapa
 
-> **Ajustes feitos na execução (2026-10-20):** a troca de dados virou uma troca anotada passo a passo, com desfazer exato; o rollback mudou para `files/backup_rollback/rollback-<epoch-ms>/`; a validação ficou estrita (entradas, links, tipos extraídos, `user_version`, nomes de mídia); as mídias entram sem compressão; as cópias no cache são limpas; a importação avisa se o lembrete for desligado por falta de permissão. Veja "Backup: importar" no [design](../design.md). O merge no `main` é feito pela Soraya, por pull request, e não pelo comando do passo 3.
+> **Ajustes feitos na execução (2026-10-19):** a troca de dados virou uma troca anotada passo a passo, com desfazer exato; o rollback mudou para `files/backup_rollback/rollback-<epoch-ms>/`; a validação ficou estrita (entradas, links, tipos extraídos, `user_version`, nomes de mídia); as mídias entram sem compressão; as cópias no cache são limpas; a importação avisa se o lembrete for desligado por falta de permissão. Veja "Backup: importar" no [design](../design.md). O merge no `main` é feito pela Soraya, por pull request, e não pelo comando do passo 3.
 
 **Arquivos:** nenhum.
 

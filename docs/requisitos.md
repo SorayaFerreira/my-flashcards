@@ -54,7 +54,7 @@ Princípios: zero anúncios, zero recursos premium, app leve e visual limpo.
   - poucos pacotes;
   - imagens comprimidas;
   - áudio em AAC compacto;
-  - APK de release para arm64 com **até 15 MB**.
+  - APK de release para arm64 com **até 20 MB**. Até 2026-10-19 o limite era 15 MB; o motivo da mudança está no registro de decisões.
 - **RNF-05:** Visual simples e limpo, em Material 3. Usa as cores do logo (`#C52DC3` magenta e `#F05BD3` rosa) como destaque, sobre um fundo neutro. O tema claro ou escuro segue a configuração do sistema.
 - **RNF-06:** Interface em português.
 - **RNF-07:** Instalado por APK direto no celular (cabo USB ou arquivo), sem Play Store.
@@ -84,8 +84,9 @@ Princípios: zero anúncios, zero recursos premium, app leve e visual limpo.
 | 2026-10-11 | Lembretes | Entram na primeira versão. Inicialmente seria uma notificação diária num horário escolhido pela usuária |
 | 2026-10-12 | Horário do lembrete | Substitui a decisão anterior: uma notificação por dia, num horário aleatório entre 9h e 20h, sem seletor de horário. Um atraso de alguns minutos é aceitável |
 | 2026-10-12 | Faixa do lembrete | Confirmada: das 9h às 20h |
-| 2026-10-20 | Segurança da importação | A troca de dados anota cada passo e desfaz exatamente o que fez se algo falhar. A pasta de rollback fica fora do cache e nunca é apagada se sobrar de uma falha. Backups com entradas ou nomes de arquivo suspeitos são recusados |
+| 2026-10-19 | Segurança da importação | A troca de dados anota cada passo e desfaz exatamente o que fez se algo falhar. A pasta de rollback fica fora do cache e nunca é apagada se sobrar de uma falha. Backups com entradas ou nomes de arquivo suspeitos são recusados |
 | 2026-10-19 | Atraso do lembrete | Como o alarme é inexato (sem pedir permissão de alarme exato), o atraso costuma ser de minutos, mas pode chegar a cerca de uma hora no pior caso |
+| 2026-10-19 | Tamanho do APK | O limite do RNF-04 passa de 15 MB para **20 MB**. O APK arm64 tem 19,1 MB, e quase tudo é código nativo: só o motor do Flutter tem 11,7 MB. Esse código fica sem compressão dentro do APK e o Android o usa direto dali, então o app ocupa uns 19 MB no celular. Comprimir deixaria o APK com uns 9 MB, mas o app passaria a ocupar uns 27 MB depois de instalado, porque o Android descompacta o código. Decisão da Soraya: manter o que ocupa menos espaço no celular |
 | 2026-10-12 | Identificador do app | `com.sorayaferreira.myflashcards` |
 | 2026-10-12 | Ambiente | Usar o Flutter 3.47.5 que já está instalado pelo FVM, e não instalar outro |
 | 2026-10-12 | Testes no celular | Feitos pela usuária. A execução dos planos para antes de cada checklist manual |

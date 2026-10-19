@@ -22,6 +22,8 @@ Este documento descreve **como** o app será construído. O **quê** e o **porqu
 | Estado | `ChangeNotifier` com `ListenableBuilder`, sem pacote de estado | Já vem no Flutter e basta para um app deste tamanho |
 | Injeção de dependências | Por construtor, montada em `main.dart`, sem `provider` nem `get_it` | É um pacote a menos, e cada dependência fica explícita no construtor |
 | Geração de código | Nenhuma | Sem `build_runner`, o build fica mais simples e rápido |
+| Assinatura do release | Chave própria em `~/.android-keys/my-flashcards.jks`, lida de `android/key.properties`, que o git ignora. Sem esse arquivo, só o build de release falha; o de debug continua funcionando | A chave e as senhas nunca entram no git. Sem a chave, nenhuma atualização instala por cima, então ela tem uma cópia guardada fora do computador |
+| Empacotamento do APK | Código nativo sem compressão dentro do APK, que é o padrão do Android Gradle Plugin para minSdk 33 | O Android usa o código direto do APK, sem descompactar. O app ocupa uns 19 MB no celular, contra uns 27 MB com compressão (decisão de 2026-10-19 em [requisitos.md](requisitos.md)) |
 
 ### Pacotes previstos
 
@@ -442,6 +444,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 - A fonte é a padrão do sistema (Roboto). Nenhuma fonte é embutida.
 - **Abertura (splash):** usa a tela de abertura nativa do Android 12+, sem pacote. Ela mostra só o "F" do logo (`drawable/splash_logo.xml`, um vetor feito a partir de `logo-f/logo_symbol.svg`) sobre a cor de fundo (`surface`) do tema do app: `#FFF7F9` no claro e `#171216` no escuro. Assim, a passagem da abertura para o app acontece sem salto de cor. A abertura fica na tela só enquanto o app carrega, sem tempo mínimo. Foi antecipada da etapa 8 para a etapa 1, a pedido da Soraya (2026-10-15).
 - O ícone é adaptativo e vem de `logo-f/`, incluindo a camada monocromática para os ícones temáticos do Android 13.
+- **Fonte grande:** com a fonte do sistema no máximo (escala 2,0) num celular de 360×640, nenhuma tela transborda. Na revisão, os botões Anterior e Próximo encolhem e quebram a linha, e a tela de fim de revisão rola. Há testes para isso (2026-10-19).
 
 ---
 
@@ -487,7 +490,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 
 - Câmera e galeria não pedem permissão, como explicado em "Imagens".
 - O app **não** tem `INTERNET` (o Flutter só adiciona essa permissão nos builds de debug), `CAMERA`, `READ_MEDIA_IMAGES` nem `SCHEDULE_EXACT_ALARM`.
-- O manifesto final (já com o que os pacotes acrescentam) é conferido no APK de release, na etapa de acabamento.
+- O manifesto final (já com o que os pacotes acrescentam) é conferido no APK de release, na etapa de acabamento. Conferido em 2026-10-19 com `aapt2`: o APK tem só `RECORD_AUDIO`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `VIBRATE` (do plugin de notificações) e a `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (do AndroidX). Nenhuma remoção foi necessária.
 - Não entra pacote só para abrir as configurações do Android. A mensagem explica o caminho.
 
 ### Lembrete diário
@@ -563,7 +566,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
    - nomes de mídia, dentro do banco, que sejam nomes simples de arquivo (sem `/`, `\`, `..` ou ponto no início). Isso impede que um backup adulterado faça o app apagar ou abrir arquivos fora de `media/`.
    - Se a validação falhar, a pasta extraída é apagada na hora. Se o problema for falta de espaço ou erro ao ler o arquivo, a mensagem é *"Não foi possível abrir o arquivo."*
 4. **Confirmar com a usuária:** *"Substituir todos os dados? O backup de 11/10/2026 tem 3 decks e 87 cards. Seus decks atuais serão apagados."* Os botões são Cancelar e Substituir.
-5. **Trocar os dados sem risco de perda** (revisto na etapa 7, 2026-10-20):
+5. **Trocar os dados sem risco de perda** (revisto na etapa 7, 2026-10-19):
    1. fechar o banco;
    2. mover o banco (com os arquivos `-wal`, `-shm` e `-journal`, se existirem) e a pasta `media/` atuais para uma pasta de rollback **nova a cada importação**, `files/backup_rollback/rollback-<epoch-ms>/`. Ela fica **fora do cache**, porque o Android pode limpar o cache sozinho;
    3. colocar os dados importados no lugar;
@@ -574,7 +577,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 6. **Depois de importar:** o lembrete é reagendado ou cancelado conforme as configurações restauradas, e o app volta para a lista de decks, recarregada. Se o backup tinha o lembrete ligado e o app está sem permissão de notificações, o lembrete fica desligado e aparece *"O lembrete foi desligado porque o app não tem permissão para notificações."*
 7. **Limpeza:** ao abrir o app, os `.zip` antigos e as pastas `export/` e `import/` do cache são apagados; a cópia do arquivo escolhido é apagada logo depois de importar ou cancelar, e a cópia que o `file_picker` faz no cache também é limpa.
 
-**Riscos aceitos (2026-10-20):**
+**Riscos aceitos (2026-10-19):**
 - Se o processo morrer no meio da troca (alguns milissegundos de renomeações), os dados originais ficam inteiros em `files/backup_rollback/rollback-<epoch-ms>/`, mas o app não os recupera sozinho. Num APK de release essa pasta não é acessível sem root; ela só seria útil para uma versão futura do app. Importar o mesmo zip de novo resolve, porque ele é o dado que a usuária queria.
 - Se desfazer a troca também falhar (falha dupla), o app pode abrir um banco vazio enquanto os dados originais estão na pasta de rollback, apesar da mensagem dizer que nada mudou.
 - Parar o áudio antes de trocar `media/` não é necessário: nada toca com a tela de configurações aberta, e no Android mover ou apagar um arquivo aberto é seguro.
@@ -639,6 +642,6 @@ Cada etapa terá um plano detalhado em `docs/planos/`. O trabalho de cada etapa 
 | 5 | Áudio | `AudioRecorderService`, `AudioPlayerService`, `MediaRepository` (parte de áudio), o campo de gravação, a permissão do microfone e o ▶ no editor e na revisão, parando ao virar ou trocar de card | RF-06, RF-10, RF-18 |
 | 6 | Lembrete | `NotificationService`, `ReminderRepository`, tela de configurações (lembrete), ícone da notificação, manifesto e desugaring | RF-19 |
 | 7 | Backup | `ZipService`, `BackupRepository` (exportar, importar, rollback), tela de configurações (backup) | RF-20, RF-21 |
-| 8 | Acabamento e release | Cor do splash, revisão visual nos temas claro e escuro, conferência das permissões no APK, chave de assinatura de release (guardada **fora** do git), `flutter build apk --release --split-per-abi`, conferência do limite de 15 MB, instalação no celular, checklist manual completo, versão 1.0.0 e uma tag no git | RNF-02, RNF-04, RNF-07 |
+| 8 | Acabamento e release | Cor do splash, revisão visual nos temas claro e escuro, conferência das permissões no APK, chave de assinatura de release (guardada **fora** do git), `flutter build apk --release --split-per-abi`, conferência do limite de 20 MB (era 15 MB; veja RNF-04), instalação no celular, checklist manual completo, versão 1.0.0 e uma tag no git | RNF-02, RNF-04, RNF-07 |
 
 **Por que esta ordem:** dados e decks são a base de tudo. A revisão vem antes das mídias para você já poder usar o app com texto. Imagem e áudio se apoiam no `MediaFileService`, que nasce na etapa 4. O backup fica por último entre as funcionalidades, porque precisa empacotar tudo o que as etapas anteriores criaram.

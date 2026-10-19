@@ -21,6 +21,6 @@ Esta pasta guarda os requisitos, o design e os planos de implementação do app.
   - **Etapa 4** concluída em 2026-10-16: imagens pela câmera e pela galeria.
   - **Etapa 5** concluída em 2026-10-18: gravar e tocar áudio.
   - **Etapa 6** concluída em 2026-10-19: lembrete diário e tela de configurações.
-  - **Etapa 7** implementada em 2026-10-20 (exportar e importar backup). Falta o teste no celular.
-  - **Próxima:** etapa 8, acabamento e release.
+  - **Etapa 7** concluída em 2026-10-19: exportar e importar backup.
+  - **Etapa 8** implementada em 2026-10-19: versão 1.0.0, assinatura de release e APK conferido (19,1 MB, só as permissões previstas). Faltam a chave de assinatura, a instalação do release e o checklist final no celular.
 
