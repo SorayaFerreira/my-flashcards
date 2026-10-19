@@ -496,14 +496,18 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 - **Regra:** **uma notificação por dia, num horário sorteado entre 9h e 20h.** O horário muda todo dia. A faixa é fixa no código, e a usuária só liga ou desliga.
 - **Configurações salvas na tabela `settings`:**
   - `reminder_enabled`: `"1"` ou `"0"` (padrão `"0"`);
-  - `reminder_scheduled_until`: `"AAAA-MM-DD"`, o último dia que já tem notificação agendada. Fica vazio quando o lembrete está desligado.
+  - `reminder_scheduled_until`: `"AAAA-MM-DD"`, o último dia que já tem notificação agendada. Fica vazio quando o lembrete está desligado. Uma data inválida, ou depois de hoje + 29, conta como "sem agenda".
+  - `reminder_times`: um JSON com o horário sorteado de cada dia agendado, como `{"20261012": "2026-10-12T14:37"}`. Serve para devolver ao Android, sem sortear de novo, os alarmes que ele perdeu (decisão de 2026-10-19).
 - **Como agendar horários aleatórios:**
   - O Android não sabe repetir uma notificação em horário aleatório. Por isso, o app agenda **uma notificação avulsa para cada um dos próximos 30 dias**, cada uma com o seu horário sorteado.
   - Cada notificação usa `zonedSchedule`, sem `matchDateTimeComponents`. O id é a data como número `AAAAMMDD`; por exemplo, `20261012`.
-  - O modo é `AndroidScheduleMode.inexactAllowWhileIdle`: a notificação **pode chegar alguns minutos atrasada**. Em troca, não é preciso pedir a permissão de alarme exato.
+  - O modo é `AndroidScheduleMode.inexactAllowWhileIdle`: a notificação **pode chegar atrasada, em geral alguns minutos e, no pior caso, perto de uma hora** (o limite do Android para alarmes inexatos). Em troca, não é preciso pedir a permissão de alarme exato.
   - **O dia de hoje** só entra se ainda faltarem pelo menos 30 minutos para as 20h. Nesse caso, o horário é sorteado entre "agora + 30 min" e 20h. Senão, a contagem começa amanhã.
   - **Completar a agenda:** quando o app abre, ele agenda só os dias depois de `reminder_scheduled_until`, até hoje + 29. Um dia que já tem horário sorteado **nunca é sorteado de novo**. Isso evita duas notificações no mesmo dia.
   - **Se o app ficar mais de 30 dias sem ser aberto,** os lembretes acabam. Basta abrir o app de novo para eles voltarem.
+  - **Alarmes perdidos:** "Forçar parada" nas configurações do Android, ou celulares que bloqueiam o início automático (como os Xiaomi), apagam os alarmes do app. Toda vez que o app abre, ele reagenda os horários guardados em `reminder_times` que ainda estão no futuro, com o mesmo id e o mesmo horário, e só então completa a agenda.
+  - **Fuso horário:** antes de cada agendamento, o app relê o fuso do celular. Um horário que já passou nunca é enviado ao plugin. Se o fuso não puder ser lido na abertura, o lembrete não agenda nada (em vez de agendar em horário errado), e ligar o interruptor mostra *"Não foi possível mudar o lembrete."*
+  - **Falhas nunca impedem o app de abrir:** o `main` captura qualquer erro do `topUp()`. Se ligar o lembrete falhar no meio, ele volta a ficar desligado, sem nada agendado.
 - **Onde fica a lógica:** num `ReminderRepository`, que recebe um relógio e um gerador aleatório pelo construtor. Assim, os testes conseguem conferir:
   - quais dias são agendados;
   - se os horários ficam dentro da faixa;
@@ -520,6 +524,12 @@ Tocar na notificação do lembrete abre o app na lista de decks.
   | Abrir o app | Se o lembrete estiver ligado, completa a agenda até hoje + 29 |
   | Importar backup | Cancela tudo. Se o backup tiver o lembrete ligado, agenda do zero, porque o `reminder_scheduled_until` restaurado se refere às notificações de outro aparelho |
   | Reiniciar o celular | O receiver de boot do plugin reagenda as notificações pendentes. Ele precisa estar declarado no manifesto, conforme o README do plugin |
+
+- **Riscos aceitos (2026-10-19):**
+  - Se o celular ficar desligado na hora de um lembrete, ele aparece assim que o celular liga (comportamento do plugin). Vários dias desligado podem gerar várias notificações de uma vez.
+  - Se as notificações forem desligadas nas configurações do Android, o interruptor do app continua ligado. Desligar e ligar o interruptor mostra a mensagem de permissão.
+  - Alguns fusos raros (como `GMT` ou `Asia/Calcutta`) não estão nos dados `latest_10y`. Num celular com um deles, o lembrete não liga. Os fusos do Brasil e de Portugal estão todos lá.
+  - Em dois casos raros pode chegar uma segunda notificação no mesmo dia: depois de uma viagem para um fuso a oeste (o alarme antigo dispara no horário do fuso de origem, e o app reagenda o mesmo horário no fuso novo), e ao desligar e ligar o lembrete (ou importar um backup) num dia em que o lembrete de hoje já chegou.
 
 - **Tocar na notificação:** abre o app normalmente, na lista de decks.
 

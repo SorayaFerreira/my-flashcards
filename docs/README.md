@@ -19,6 +19,7 @@ Esta pasta guarda os requisitos, o design e os planos de implementação do app.
   - **Etapa 2** concluída em 2026-10-15: cards de texto, com a tela do deck e o editor.
   - **Etapa 3** concluída em 2026-10-16: revisão com o card que vira ao arrastar e o contador.
   - **Etapa 4** concluída em 2026-10-16: imagens pela câmera e pela galeria.
-  - **Etapa 5** implementada em 2026-10-18 (gravar e tocar áudio). Falta o teste no celular.
-  - **Próxima:** etapa 6, lembrete e configurações.
+  - **Etapa 5** concluída em 2026-10-18: gravar e tocar áudio.
+  - **Etapa 6** implementada em 2026-10-19 (lembrete diário e tela de configurações). Falta o teste no celular.
+  - **Próxima:** etapa 7, backup.
 
