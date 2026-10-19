@@ -75,11 +75,21 @@ class MediaFileService {
     }
   }
 
+  /// Names that are not plain file names are skipped: a name read from a
+  /// database must never reach outside the media or draft folder.
   Future<void> deleteDrafts(Iterable<String> names) =>
-      _deleteAll(names.map(draftFile));
+      _deleteAll(names.where(isPlainFileName).map(draftFile));
 
   Future<void> deleteMedia(Iterable<String> names) =>
-      _deleteAll(names.map(mediaFile));
+      _deleteAll(names.where(isPlainFileName).map(mediaFile));
+
+  /// True for a bare file name: no folders, not `.`/`..`, not hidden.
+  static bool isPlainFileName(String name) =>
+      name.isNotEmpty &&
+      !name.startsWith('.') &&
+      !name.contains('/') &&
+      !name.contains(r'\') &&
+      p.basename(name) == name;
 
   Future<void> clearDrafts() async {
     if (await draftDir.exists()) await draftDir.delete(recursive: true);

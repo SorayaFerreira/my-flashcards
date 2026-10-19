@@ -84,6 +84,7 @@ Princípios: zero anúncios, zero recursos premium, app leve e visual limpo.
 | 2026-10-11 | Lembretes | Entram na primeira versão. Inicialmente seria uma notificação diária num horário escolhido pela usuária |
 | 2026-10-12 | Horário do lembrete | Substitui a decisão anterior: uma notificação por dia, num horário aleatório entre 9h e 20h, sem seletor de horário. Um atraso de alguns minutos é aceitável |
 | 2026-10-12 | Faixa do lembrete | Confirmada: das 9h às 20h |
+| 2026-10-20 | Segurança da importação | A troca de dados anota cada passo e desfaz exatamente o que fez se algo falhar. A pasta de rollback fica fora do cache e nunca é apagada se sobrar de uma falha. Backups com entradas ou nomes de arquivo suspeitos são recusados |
 | 2026-10-19 | Atraso do lembrete | Como o alarme é inexato (sem pedir permissão de alarme exato), o atraso costuma ser de minutos, mas pode chegar a cerca de uma hora no pior caso |
 | 2026-10-12 | Identificador do app | `com.sorayaferreira.myflashcards` |
 | 2026-10-12 | Ambiente | Usar o Flutter 3.47.5 que já está instalado pelo FVM, e não instalar outro |

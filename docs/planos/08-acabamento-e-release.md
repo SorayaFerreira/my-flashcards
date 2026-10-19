@@ -326,6 +326,8 @@ Esperado: `package: name='com.sorayaferreira.myflashcards'`, `versionName='1.0.0
 
 ### Tarefa 5: instalar o release no celular, sem perder dados
 
+> **Recomendações da revisão da etapa 7 (2026-10-20):** antes de desinstalar o build de debug, confira o zip no computador (`unzip -l` e `sqlite3 flashcards.db 'select count(*) from cards'`), guarde-o em **dois lugares** e, se possível, teste a importação desse zip no APK de release num emulador com Android 13 ou mais novo. A importação precisa funcionar no build de release, que passa pelo R8.
+
 **Arquivos:** nenhum.
 
 O celular hoje tem a versão de debug, assinada com outra chave. O Android **não deixa** instalar a de release por cima. O roteiro abaixo leva os dados de uma para a outra.

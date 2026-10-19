@@ -117,4 +117,20 @@ void main() {
       expect(files.mediaDir.existsSync(), isTrue);
     },
   );
+
+  test(
+    'deleteMedia e deleteDrafts ignoram nomes que não são simples',
+    () async {
+      final outsideMedia = File(p.join(files.mediaDir.parent.path, 'x'));
+      final outsideDrafts = File(p.join(files.draftDir.parent.path, 'y'));
+      await outsideMedia.writeAsString('a');
+      await outsideDrafts.writeAsString('b');
+
+      await files.deleteMedia(['../x', '..', '.', '.oculto', r'a\b', 'a/b']);
+      await files.deleteDrafts(['../y']);
+
+      expect(await outsideMedia.exists(), isTrue);
+      expect(await outsideDrafts.exists(), isTrue);
+    },
+  );
 }

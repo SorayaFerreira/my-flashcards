@@ -49,6 +49,7 @@ class AppRoutes {
   Route<void> settings() {
     final viewModel = SettingsViewModel(
       reminderRepository: _dependencies.reminders,
+      backupRepository: _dependencies.backups,
     );
     return MaterialPageRoute(
       builder: (_) => SettingsScreen(viewModel: viewModel),

@@ -542,6 +542,9 @@ Tocar na notificação do lembrete abre o app na lista de decks.
      "exportedAt": "2026-10-11T20:15:00-03:00", "decks": 3, "cards": 87 }
    ```
 3. O app compacta `manifest.json`, `flashcards.db` e `media/` em `my-flashcards-backup-AAAA-MM-DD.zip`.
+   - As contagens de decks e cards do manifesto vêm da cópia do banco, não do banco em uso.
+   - As mídias entram no zip **sem compressão** (já são JPEG e AAC). Só entram arquivos de `media/` com nome simples, os mesmos que a importação aceita.
+   - `exportedAt` é gravado no horário local, sem o fuso (por exemplo, `2026-10-11T20:15:00.000`); ele só serve para mostrar a data na confirmação.
    - A compactação roda **num isolate separado** (`Isolate.run`), para a tela não travar.
    - Enquanto isso, aparece o diálogo *"Gerando backup…"*.
 4. O `.zip` é entregue ao menu de compartilhar (`share_plus`). O destino recomendado é o **Google Drive**, porque o backup sobrevive se o celular se perder.
@@ -550,22 +553,31 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 ### Backup: importar
 
 1. **Escolher o arquivo** com `file_picker`, filtrando por `.zip`.
-2. **Extrair num isolate** para `<tmp>/import/`. Nessa extração:
-   - entradas com `..` ou caminho absoluto são **recusadas**, para impedir que o zip escreva fora da pasta;
+2. **Extrair num isolate** para `<tmp>/backup/import/`. Antes de extrair, a lista de entradas é conferida:
+   - só entram exatamente `manifest.json`, `flashcards.db`, a pasta `media/` e arquivos `media/<nome simples>`; qualquer outra entrada (com `..`, caminho absoluto, `\`, subpastas, `media` como arquivo, links simbólicos) faz o backup ser **recusado**, para impedir que o zip escreva fora da pasta ou deixe o app sem abrir;
    - um arquivo que não seja um backup válido é recusado com a mensagem *"Este arquivo não é um backup do My Flashcards."*
 3. **Validar o backup.** Ele precisa ter:
    - um `manifest.json` com `app == "my_flashcards"` e `formatVersion == 1`;
    - `schemaVersion` menor ou igual à versão atual do schema;
-   - um `flashcards.db` que abre sem erro.
+   - um `flashcards.db` que abre sem erro, tem as tabelas `decks`, `cards` e `settings` e `user_version` entre 1 e a versão atual do schema;
+   - nomes de mídia, dentro do banco, que sejam nomes simples de arquivo (sem `/`, `\`, `..` ou ponto no início). Isso impede que um backup adulterado faça o app apagar ou abrir arquivos fora de `media/`.
+   - Se a validação falhar, a pasta extraída é apagada na hora. Se o problema for falta de espaço ou erro ao ler o arquivo, a mensagem é *"Não foi possível abrir o arquivo."*
 4. **Confirmar com a usuária:** *"Substituir todos os dados? O backup de 11/10/2026 tem 3 decks e 87 cards. Seus decks atuais serão apagados."* Os botões são Cancelar e Substituir.
-5. **Trocar os dados sem risco de perda:**
+5. **Trocar os dados sem risco de perda** (revisto na etapa 7, 2026-10-20):
    1. fechar o banco;
-   2. mover o banco e a pasta `media/` atuais para `<tmp>/rollback/`;
+   2. mover o banco (com os arquivos `-wal`, `-shm` e `-journal`, se existirem) e a pasta `media/` atuais para uma pasta de rollback **nova a cada importação**, `files/backup_rollback/rollback-<epoch-ms>/`. Ela fica **fora do cache**, porque o Android pode limpar o cache sozinho;
    3. colocar os dados importados no lugar;
-   4. abrir o banco, o que roda `onUpgrade` se o backup for de um schema mais antigo.
-   - **Se tudo der certo:** a pasta de rollback é apagada.
-   - **Se der erro:** os dados de rollback voltam ao lugar e aparece a mensagem *"Não foi possível importar. Seus dados não foram alterados."*
-6. **Depois de importar:** o lembrete é reagendado ou cancelado conforme as configurações restauradas, e o app volta para a lista de decks, recarregada.
+   4. abrir o banco.
+   - Cada passo concluído fica anotado. **Se der erro**, o app desfaz exatamente o que fez, na ordem inversa: devolve os importados para a pasta de importação, põe os dados originais de volta, tenta reabrir o banco e aparece a mensagem *"Não foi possível importar. Seus dados não foram alterados."* O app nunca apaga um arquivo que a importação não colocou.
+   - **Se tudo der certo:** a pasta de rollback desta importação é apagada. A limpeza é feita sem risco: se falhar, a importação continua contando como sucesso.
+   - Uma pasta de rollback que sobrar de uma falha **nunca é apagada nem reaproveitada** automaticamente.
+6. **Depois de importar:** o lembrete é reagendado ou cancelado conforme as configurações restauradas, e o app volta para a lista de decks, recarregada. Se o backup tinha o lembrete ligado e o app está sem permissão de notificações, o lembrete fica desligado e aparece *"O lembrete foi desligado porque o app não tem permissão para notificações."*
+7. **Limpeza:** ao abrir o app, os `.zip` antigos e as pastas `export/` e `import/` do cache são apagados; a cópia do arquivo escolhido é apagada logo depois de importar ou cancelar, e a cópia que o `file_picker` faz no cache também é limpa.
+
+**Riscos aceitos (2026-10-20):**
+- Se o processo morrer no meio da troca (alguns milissegundos de renomeações), os dados originais ficam inteiros em `files/backup_rollback/rollback-<epoch-ms>/`, mas o app não os recupera sozinho. Num APK de release essa pasta não é acessível sem root; ela só seria útil para uma versão futura do app. Importar o mesmo zip de novo resolve, porque ele é o dado que a usuária queria.
+- Se desfazer a troca também falhar (falha dupla), o app pode abrir um banco vazio enquanto os dados originais estão na pasta de rollback, apesar da mensagem dizer que nada mudou.
+- Parar o áudio antes de trocar `media/` não é necessário: nada toca com a tela de configurações aberta, e no Android mover ou apagar um arquivo aberto é seguro.
 
 **Sobre o tamanho do backup:** 500 cards com imagem dão cerca de 100 MB. O Drive aceita sem problema, mas apps de mensagem podem recusar arquivos desse tamanho.
 
@@ -589,7 +601,7 @@ Tocar na notificação do lembrete abre o app na lista de decks.
 | Microfone negado | Mensagem explicando como ativar | O resto do editor funciona |
 | Notificações negadas | O interruptor volta para desligado e aparece uma mensagem | — |
 | Backup inválido ou corrompido | *"Este arquivo não é um backup do My Flashcards."* | Nada muda |
-| Erro no meio da importação | *"Não foi possível importar. Seus dados não foram alterados."* | Os dados guardados no rollback voltam ao lugar |
+| Erro no meio da importação | *"Não foi possível importar. Seus dados não foram alterados."* | O app desfaz exatamente os passos feitos, na ordem inversa, e os dados originais voltam do rollback |
 | Falha ao exportar (por exemplo, sem espaço) | *"Não foi possível gerar o backup."* | Nada muda, e o zip pela metade é apagado |
 
 **Risco aceito na primeira versão:** se o Android fechar o app enquanto a câmera do sistema está aberta (acontece com pouca memória), o card que estava sendo editado se perde. Isso é raro em celulares atuais, e tratar o caso exigiria salvar o rascunho a cada alteração.

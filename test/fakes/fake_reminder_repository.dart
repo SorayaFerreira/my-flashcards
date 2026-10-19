@@ -9,6 +9,10 @@ class FakeReminderRepository implements ReminderRepository {
   var topUpCalls = 0;
   var resetCalls = 0;
 
+  /// Makes [resetAfterImport] turn the reminder off, as when the permission
+  /// is missing.
+  bool disableOnReset = false;
+
   Future<Result<T>> _answer<T>(T Function() compute) async {
     final error = failWith;
     if (error != null) return Result.error(error);
@@ -33,5 +37,8 @@ class FakeReminderRepository implements ReminderRepository {
   Future<Result<void>> topUp() => _answer(() => topUpCalls++);
 
   @override
-  Future<Result<void>> resetAfterImport() => _answer(() => resetCalls++);
+  Future<Result<void>> resetAfterImport() => _answer(() {
+    resetCalls++;
+    if (disableOnReset) enabled = false;
+  });
 }
